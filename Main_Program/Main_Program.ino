@@ -1,6 +1,17 @@
 #include <Servo.h> 
 #include <Wire.h>
-#include <LSM303.h>
+#include "LSM303.h"
+#include "LIDAR.h"
+ 
+//Course constants for searching
+const int BaseWidth = 30; // cm, 1 foot
+const int CourseWidth = 300; // cm, 3m
+const int CourseLength = 600; //cm, 6m
+const int SafteyFactor = 2;
+const float North = 90.0;
+const float South = 270.0;
+const float East = 0;
+const float West = 180.0;
  
 LSM303 compass;
 float heading;
@@ -9,22 +20,31 @@ float gravity;
 float initialGravity;
 float onRampGravity;
  
-int servoLeftPin = 5;
-int servoRightPin = 6;
+int servoLeftPin = 4;
+int servoRightPin = 5;
 Servo servoLeft;  // create servo object to control a servo
 Servo servoRight;  // create servo object to control a servo
 
-int servoArmPin = 4;
+int servoArmPin = 7;
 Servo servoArm;
 
-int servoFlangePin = 3;
+int servoFlangePin = 6;
 Servo servoFlange;
 
-int bumpForwardPin = 7;
-volatile boolean bumpForward = false; // Triggered true by boolean. 
+int bumpTopPin = 18;
+int bumpTopInterrupt = 4;
+volatile boolean bumpTop = false; // Triggered true by boolean. 
 
-int IRLeftPin = 8;
-int IRRightPin = 9;
+int bumpBottomPin = 19;
+int bumpBottomInterrupt = 5;
+volatile boolean bumpBottom = false; // Triggered true by boolean. 
+
+int IRLeftPin = 0;
+int IRRightPin = 1;
+
+Lidar lidar; //Create LIDAR object
+int lidarMonitorPin = 16;
+int lidarTriggerPin = 17;
 
 void forward(){
     servoLeft.write(0);  
@@ -58,7 +78,7 @@ void turn(float offset)
   float wantedHeading = initialHeading + offset;
   
   // This algorithm determines whether it is faster to turn right or left depending on the current heading.
-  if(heading < initial Heading)
+  if(heading < initialHeading)
   {
     heading += 360;
   }
@@ -127,23 +147,142 @@ void stayOnRamp()
   }
 }
 
+void deployTrap()
+{
+  //TODO:: Servo control Code
+}
+
+void retractTrap()
+{
+  //TODO:: Servo Control Code
+}
+
+
+//Searches for an item that should be x cm away, stop once found or if a boundary hit
+void search(int distance)
+{
+  forward();
+  while(!bumpTop || !bumpBottom || lidar.scan() < distance);
+  brake();
+}
+
+//Returns time taken in us to get from one end of the base to the other
+int calculateDelayTime(double distance)
+{
+  long time1 = micros();	
+  forward();
+  while(!bumpTop || !bumpBottom || lidar.scan() > distance);	
+  brake();	
+  return (int)((micros() - time1) / 2);
+}
+
+//Determines search result (found base, hit base, hit wall/pipe)
+//Executes appropriate response
+bool parseGridSearchResult(int searchNumber, double distance)
+{
+  if(bumpTop)
+  {
+    return false;
+  }
+  else if(bumpBottom) 
+  {
+    //Case needs to be beefed up so that the robot centers itself on base
+    deployTrap();
+    retractTrap();
+    turn(South + (90 * searchNumber) % 360);
+    return true;
+  }
+  else if(lidar.scan() < distance)
+  {
+    //Find time taken to get to other end of base
+    int delayTime = calculateDelayTime(distance);
+    
+    //Reverse till centered            
+    reverse();
+    delayMicroseconds(delayTime);
+    brake();
+    
+    //Turn to be perpindicular to base and go forward till the base is hit
+    turn(West + (90 * searchNumber) % 360);
+    forward();
+    while(!bumpBottom);
+    brake();
+
+    deployTrap();
+    retractTrap();
+
+    //Return to wall and orientate 180deg from search direction 
+    turn(East + (90 * searchNumber) % 360);
+    forward();
+    while(!bumpBottom || !bumpTop);
+    brake();
+    turn(South + (90 * searchNumber) % 360);
+    return true;
+  }
+  return false;
+}
+
+//Function for finding and capturing lego man
+//Final posistion wil be against the east wall facing south
+void gridSearch()
+{
+  int maxWidth = CourseWidth - BaseWidth / SafteyFactor;
+  int maxLength = CourseLength - BaseWidth / SafteyFactor;
+
+  lidar.on();
+  //Shouldn't need to run all four walls, but code is here in case it is necessary
+  for(int i = 0; i < 4; i++)
+  {
+    double distance = 0;
+    if(i % 2 == 0)
+      distance = maxWidth;
+    else 
+      distance = maxLength;
+		
+    search(distance);		
+    
+    if(parseGridSearchResult(i, distance))
+    {
+      //Traverse to be back on the east wall facing south
+      for (int j = 0; j < i; j++)
+      {
+        forward();
+        while(!bumpBottom || !bumpTop);
+        brake();
+        turn(South + (90 * j) % 360);
+      }
+      break;
+    }
+    else //Check next wall
+    {
+      turn(West + (90 * i) % 360);
+    }
+  }
+  lidar.off();
+}
+
 void moveUntilBump()
 {
   forward();
-  while(!(bumpForward)){}
-  bumpForward = false;  
+  while(!(bumpTop)){}
 }
 
 void setup() 
 { 
-  attachInterrupt(0, ISR_BUMP, RISING); // Note- can be LOW, CHANGE, RISING, or FALLING
-    
   servoLeft.attach(servoLeftPin);
   servoRight.attach(servoRightPin);
   
   pinMode(IRLeftPin, INPUT);
   pinMode(IRRightPin, INPUT);
-  pinMode(bumpForwardPin, INPUT);  
+  
+  pinMode(bumpTopPin, INPUT_PULLUP); 
+  pinMode(bumpBottomPin, INPUT_PULLUP);
+  
+  //Attach bump ISRs
+  attachInterrupt(bumpTopInterrupt, ISR_BUMP_TOP, CHANGE); // Note- can be LOW, CHANGE, RISING, or FALLING
+  attachInterrupt(bumpBottomInterrupt, ISR_BUMP_BOTTOM, CHANGE); // Note- can be LOW, CHANGE, RISING, or FALLING
+  
+  lidar.initPWM(lidarTriggerPin, lidarMonitorPin);
   
   Wire.begin();
   compass.init();
@@ -197,36 +336,8 @@ void loop()
   }  
   brake(); 
   
-  // Turn 90 degrees
-  turn(180.0);
-  
-  
-  
-  // Scan
-  // If probable height then take next few readings to see if they are the same.
-  int start, ending;
-  for(int i = 0; i < 180; i++)
-  {
-    // Scan for heights.
-    // record range of degrees that have select heights first the start then the ending.
-  }
-  // Head in direction of the middle of the clump of valuable readings.
-  double dir_base = ((start + ending) /2.0)+90.0;
-  turn(dir_base);
-  
-  // If none then head forward a little bit.
-  moveUntilBump();
-  servoArm.write(0);  // Swat down
-  delay(1000); // Wait for arm  
-  servoArm.write(180);  // Swat up
-  
-  reverse(); // reverse a bit to back away from base.
-  delay(200);
-  turn(0.0);
-  
-  moveUntilBump();
-  // Turn until heading is lined up with ramp on return.
-  turn(270.0);
+  // Search find and capture lego figure
+  gridSearch();
   
   // Add course corrections as needed.
   // Drive forward until on ramp.
@@ -262,8 +373,18 @@ void loop()
   }
 }
 
-void ISR_BUMP()
+void ISR_BUMP_TOP()
 {
   // Double check that arduinon automaticaly resets the register for me.
-  bumpForward = true;
+  
+  //Pin is normally High, Low when button pressed
+  bumpTop = (digitalRead(bumpTopPin) == LOW);
+}
+
+void ISR_BUMP_BOTTOM()
+{
+  // Double check that arduinon automaticaly resets the register for me.
+  
+  //Pin is normally High, Low when button pressed
+  bumpBottom = (digitalRead(bumpBottomPin) == LOW);
 }

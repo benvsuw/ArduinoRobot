@@ -12,21 +12,26 @@
 class Lidar
 {
   public:
-    Lidar(int pinTrig, int pinEcho);
-    int scan(); // Return distance in mm. 
+    Lidar(void);
+    void initPWM(int pinTrig, int pinEcho);		// Initialize LIDAR as PWM input
+    int scan(); 								// Return distance in cm. 
+    void on(); 									// Turn on LIDAR
+    void off(); 								// Turn off LIDAR
     
     
   private:
   bool _init;
+  bool _on;
   int _pinTrig;
   int _pinEcho;
-  
   int scanPWM();
+  /*
   void initPWM();
   int scanI2C();
   void initI2C();
   int scanWire();
   void initWire();
+  */
 };
 
 #endif

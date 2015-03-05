@@ -6,7 +6,6 @@
 #include<stdlib.h>
 #include "Arduino.h"
 #include "LIDAR.h"
-#include <I2C.h>
 #include <Wire.h>
 
 #define    LIDARLite_ADDRESS   0x62          // Default I2C Address of LIDAR-Lite.
@@ -19,19 +18,35 @@
  ************************************************************************/
  
  // Constructor
- Lidar::Lidar(int pinTrig, int pinEcho):
- _pinTrig(pinTrig),
- _pinEcho(pinEcho),
- _init(false)
+ Lidar::Lidar(void) { }
+
+ void Lidar::initPWM(int pinTrig, int pinEcho)
  {
+ 	  pinMode(_pinTrig, OUTPUT); // Set pin 2 as trigger pin
+      pinMode(_pinEcho, INPUT); // Set pin 3 as monitor pin
+      digitalWrite(2, HIGH); // Set LIDAR off
+      
+      _init = true;
  }
  
- // Get distance in mm
+ void Lidar::on()
+ {
+ 	digitalWrite(2, LOW);
+ 	_on = true;
+ }
+ 
+ void Lidar::off()
+ {
+ 	digitalWrite(2, HIGH);
+ 	_on = false;
+ }
+ 
+ // Get distance in cm
  int Lidar::scan()
  {
+    if(!_on)
+    	on();
     return scanPWM();
-    // return scanI2C();
-    // return scanWire();
  }
  
  
@@ -39,31 +54,12 @@
  *  Private Functions   	                                             *
  ************************************************************************/
   int Lidar::scanPWM()
-  {
-    if (!_init)
-    {
-      initPWM();
-    }
-    
-    unsigned long pulse_width = pulseIn(3, HIGH); // Count how long the pulse is high in microseconds
-    //if(pulse_width != 0){ // If we get a reading that isn't zero, let's print it
-    //  pulse_width = pulse_width/10; // 10usec = 1 cm of distance for LIDAR-Lite
-    //	//Serial.println(pulse_width); // Print the distance
-    //}
-    delay(20); // Delay so we don't overload the serial port
-    return (int)pulse_width;
+  {   
+    unsigned long pulse_width = pulseIn(3, HIGH);
+    return (int)pulse_width / 10; // 10usec = 1 cm of distance for LIDAR-Lite;
   }
   
-  void Lidar::initPWM()
-  {
-      // Serial.begin(9600); // Start serial communications
-      pinMode(_pinTrig, OUTPUT); // Set pin 2 as trigger pin
-      pinMode(_pinEcho, INPUT); // Set pin 3 as monitor pin
-      digitalWrite(2, LOW); // Set trigger LOW for continuous read
-      
-      _init = true;
-  }
-
+  /*
   int Lidar::scanI2C()
   {
     if (!_init)
@@ -105,11 +101,7 @@
   
   int Lidar::scanWire()
   {
-    if (!_init)
-    {
-      initWire();
-    }
-    
+
     int reading = 0;
     Wire.beginTransmission((int)LIDARLite_ADDRESS); // transmit to LIDAR-Lite
     Wire.write((int)RegisterMeasure); // sets register pointer to  (0x00)  
@@ -145,4 +137,5 @@
    
     _init = true;
   }
+  */
  

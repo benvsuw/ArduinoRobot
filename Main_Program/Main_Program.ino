@@ -1,6 +1,6 @@
 #include <Servo.h> 
 #include <Wire.h>
-#include "LSM303.h"
+#include <LSM303.h>
 #include "LIDAR.h"
  
 //Course constants for searching
@@ -40,10 +40,10 @@ int servoRightPin = 5;
 Servo servoLeft;  // create servo object to control a servo
 Servo servoRight;  // create servo object to control a servo
 
-int servoArmPin = 7;
+int servoArmPin = 6;
 Servo servoArm;
 
-int servoFlangePin = 6;
+int servoFlangePin = 7;
 Servo servoFlange;
 
 int bumpTopPin = 18;
@@ -54,8 +54,8 @@ int bumpBottomPin = 19;
 int bumpBottomInterrupt = 5;
 volatile boolean bumpBottom = false; // Triggered true by boolean. 
 
-int IRLeftPin = 0;
-int IRRightPin = 1;
+int IRLeftPin = A0;
+int IRRightPin = A1;
 
 Lidar lidar; //Create LIDAR object
 int lidarMonitorPin = 16;
@@ -63,8 +63,8 @@ int lidarTriggerPin = 17;
 
 
 void forward(){
-    servoLeft.write(0);  
-    servoRight.write(180);
+    servoLeft.write(60.5);  
+    servoRight.write(97);
 }
 
 void forward(int leftSpeed, int rightSpeed)
@@ -100,23 +100,24 @@ void brake(){
 }
 
 void reverse(){
-    servoLeft.write(180);  
-    servoRight.write(0);    
+    servoLeft.write(100.5);  
+    servoRight.write(57);    
 }
 
 void left(){
-    servoLeft.write(0);  
-    servoRight.write(0);    
+    servoLeft.write(77.5);  
+    servoRight.write(74);    
 }
 
 void right(){
-    servoLeft.write(180);  
-    servoRight.write(180);    
+    servoLeft.write(83.5);  
+    servoRight.write(80);    
 }
 
 void turn(float offset)
 {
   boolean temp = false;  
+  compass.read();
   heading = compass.heading();
   float wantedHeading = initialHeading + offset;
   
@@ -125,7 +126,8 @@ void turn(float offset)
   {
     heading += 360;
   }
-  if((heading - wantedHeading) > 180) // Modulus does not work on floats
+  
+  if((heading - wantedHeading) < 180) // Modulus does not work on floats
   {
     right();
   }
@@ -138,15 +140,31 @@ void turn(float offset)
 
 boolean headingCheck(double offset)  // Checks that the heading is correct.
 {
+  compass.read();
   boolean temp = false;  
-  heading = compass.heading();
-  float wantedHeading = initialHeading + offset;
-  if(wantedHeading > 360) // Modulus does not work on floats
+  float tempheading = compass.heading();
+  float tolerance = 2.0;
+  float wantedHeading = initialHeading + offset;  
+  
+  if(wantedHeading > 360)
   {
     wantedHeading -= 360;
   }
+  
+  if((wantedHeading < tolerance) && (tempheading > (360-tolerance)))
+  {
+    wantedHeading += 360;
+  }
+  
+  if((wantedHeading > (360 - tolerance)) && (tempheading < tolerance))
+  {
+    wantedHeading -= 360;
+  } 
+  
+  float error = abs(wantedHeading - tempheading);
   // Compare with the initial vector.  
-  if( (initialHeading <= (wantedHeading + 0.5))&&(initialHeading >= (wantedHeading - 0.5)) )
+  
+  if( error < tolerance )
   {
     temp = true;
   }
@@ -156,7 +174,7 @@ boolean headingCheck(double offset)  // Checks that the heading is correct.
 boolean onRamp() // Checks if on ramp.
 {  
   compass.read();
-  if(onRampGravity > compass.a.z)
+  if(onRampGravity < compass.a.z)
   {
     return true;
   }  
@@ -314,6 +332,8 @@ void setup()
 { 
   servoLeft.attach(servoLeftPin);
   servoRight.attach(servoRightPin);
+  servoArm.attach(servoArmPin);
+  servoFlange.attach(servoFlangePin);
   
   pinMode(IRLeftPin, INPUT);
   pinMode(IRRightPin, INPUT);
@@ -338,6 +358,11 @@ void setup()
   initialGravity = compass.a.z;
   onRampGravity = initialGravity*0.72; // This should be 0.707*z at 45 degrees;
   
+  //Serial.begin(9600);
+  // Sets the servos to an initial position so that it does not move at start up.
+  servoArm.write(0);
+  servoFlange.write(0);
+  brake();
   delay(500);  
 } 
 
@@ -407,9 +432,9 @@ void loop()
   // Dead reckoning back to base
   forward();
   delay(1000); //adjust so that it travels the right distance.
-  turn(180);  // Line up with base.  
+  turn(west);  // Line up with base.  
   moveUntilBump();
-  servoArm.write(0); // Safely deposit person at base 2.  
+  deployTrap(); // Safely deposit person at base 2.  
   
   while(1) // do nothing after the main loop.
   {

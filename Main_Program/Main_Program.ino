@@ -13,6 +13,21 @@ const float South = 270.0;
 const float East = 0;
 const float West = 180.0;
  
+//Speed
+//Stop
+const int LeftStop = 1378;
+const int RightStop = 1336;
+//Slow Forward
+const int LeftSlowForward = 1310;
+const int RightSlowForward = 1400;
+//Medium Forward
+const int LeftMediumForward = 1209;
+const int RightMediumForward = 1500;
+//Fast Forward
+const int LeftFastForward = 1160;
+const int RightFastForward = 1535;
+ 
+ 
 LSM303 compass;
 float heading;
 float initialHeading;
@@ -46,14 +61,42 @@ Lidar lidar; //Create LIDAR object
 int lidarMonitorPin = 16;
 int lidarTriggerPin = 17;
 
+
 void forward(){
     servoLeft.write(0);  
-    servoRight.write(180);    
+    servoRight.write(180);
+}
+
+void forward(int leftSpeed, int rightSpeed)
+{
+    servoLeft.writeMicroseconds(leftSpeed);  
+    servoRight.writeMicroseconds(rightSpeed);
+}
+
+void keepForward(int leftSpeed, int rightSpeed, float straightHeading)
+{
+  compass.read();
+  if((compass.heading() - straightHeading) > 2)
+  {
+    forward(leftSpeed - 5, rightSpeed);
+    do
+      compass.read();
+    while (compass.heading() > straightHeading);
+    forward(leftSpeed , rightSpeed);
+  }
+  else if((compass.heading() - straightHeading) < -2)
+  {
+    forward(leftSpeed, rightSpeed + 5);
+    do
+      compass.read();
+    while (compass.heading() < straightHeading);
+    forward(leftSpeed , rightSpeed);
+  }
 }
 
 void brake(){
-    servoLeft.write(85);  
-    servoRight.write(85);    
+    servoLeft.writeMicroseconds(1378);  
+    servoRight.writeMicroseconds(1336);    
 }
 
 void reverse(){

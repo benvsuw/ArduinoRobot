@@ -6,7 +6,7 @@
 //Course constants for searching
 const int BaseWidth = 30; // cm, 1 foot
 const int CourseWidth = 300; // cm, 3m
-const int CourseLength = 600; //cm, 6m
+const int CourseLength = 300; //cm, 6m
 const int SafteyFactor = 2;
 const float North = 270.0;
 const float NorthEast = 297.5;
@@ -32,9 +32,12 @@ const int RightFastForward = 1535;
 const int LeftIRLimit = 110;
 const int RightIRLimit = 60;
 
-const int FlangeDown = 135;
-const int FlangeUp = 0;
- 
+//Clamp constants
+const int ClampUp = 180;
+const int ClampDown = 0;
+const int ClampBack = 180;
+const int ClampCenter = 90;
+const int ClampFront = 0;
  
 LSM303 compass;
 float heading;
@@ -51,15 +54,22 @@ Servo servoRight;  // create servo object to control a servo
 int servoArmPin = 6;
 Servo servoArm;
 
-int servoFlangePin = 7;
-Servo servoFlange;
+//Clamp
+int servoClampVerticleLeftPin = 7;
+Servo servoClampVerticleLeft;
+int servoClampVerticleRightPin = 8;
+Servo servoClampVerticleRight;
+int servoClampGripLeftPin = 9;
+Servo servoClampGripLeft;
+int servoClampGripRightPin = 10;
+Servo servoClampGripRight;
 
-int bumpTopPin = 18;
-int bumpTopInterrupt = 5;
+int bumpTopPin = 19;
+int bumpTopInterrupt = 4;
 volatile boolean bumpTop = false; // Triggered true by boolean. 
 
-int bumpBottomPin = 19;
-int bumpBottomInterrupt = 4;
+int bumpBottomPin = 18;
+int bumpBottomInterrupt = 5;
 volatile boolean bumpBottom = false; // Triggered true by boolean. 
 
 int IRLeftPin = A0;
@@ -69,8 +79,8 @@ Lidar lidar; //Create LIDAR object
 int lidarMonitorPin = 16;
 int lidarTriggerPin = 17;
 
-
-void forward(){
+void forward()
+{
     servoLeft.write(60.5);  
     servoRight.write(97);
 }
@@ -81,29 +91,8 @@ void forward(int leftSpeed, int rightSpeed)
     servoRight.writeMicroseconds(rightSpeed);
 }
 
-void keepForward(int leftSpeed, int rightSpeed, float straightHeading)
-{
-  compass.read();
-  if((compass.heading() - straightHeading) > 2)
-  {
-    forward(leftSpeed - 5, rightSpeed);
-    do
-      compass.read();
-    while (compass.heading() > straightHeading);
-    forward(leftSpeed , rightSpeed);
-  }
-  else if((compass.heading() - straightHeading) < -2)
-  {
-    forward(leftSpeed, rightSpeed + 5);
-    do
-      compass.read();
-    while (compass.heading() < straightHeading);
-    forward(leftSpeed , rightSpeed);
-  }
-}
 
 void forward(int velPercent, float wantedHeading)
-
 {
 
    // Normalize velocity{0..99}, heading{0..360}
@@ -317,8 +306,12 @@ void retractTrap()
 //Searches for an item that should be x cm away, stop once found or if a boundary hit
 void search(int distance)
 {
-  forward();
-  while(!bumpTop || !bumpBottom || lidar.scan() < distance);
+  compass.read();
+  float wantedHeading = compass.heading();
+  while(!bumpTop || !bumpBottom || lidar.scan() < distance)
+  {    
+    forward(50, wantedHeading);
+  }      
   brake();
 }
 
@@ -326,8 +319,12 @@ void search(int distance)
 int calculateDelayTime(double distance)
 {
   long time1 = micros();	
-  forward();
-  while(!bumpTop || !bumpBottom || lidar.scan() > distance);	
+  compass.read();
+  float wantedHeading = compass.heading();
+  while(!bumpTop || !bumpBottom || lidar.scan() > distance)
+  {    
+    forward(50, wantedHeading);
+  }    
   brake();	
   return (int)((micros() - time1) / 2);
 }
@@ -360,8 +357,12 @@ bool parseGridSearchResult(int searchNumber, double distance)
     
     //Turn to be perpindicular to base and go forward till the base is hit
     turn(West + (90 * searchNumber) % 360);
-    forward();
-    while(!bumpBottom);
+    compass.read();
+    float wantedHeading = compass.heading();
+    while(!bumpBottom) 
+    {    
+      forward(50, wantedHeading);
+    }
     brake();
 
     deployTrap();
@@ -369,8 +370,12 @@ bool parseGridSearchResult(int searchNumber, double distance)
 
     //Return to wall and orientate 180deg from search direction 
     turn(East + (90 * searchNumber) % 360);
-    forward();
-    while(!bumpBottom || !bumpTop);
+    compass.read();
+    wantedHeading = compass.heading();
+    while(!bumpBottom || !bumpTop)
+    {    
+      forward(50, wantedHeading);
+    }    
     brake();
     turn(South + (90 * searchNumber) % 360);
     return true;
@@ -402,8 +407,12 @@ void gridSearch()
       //Traverse to be back on the east wall facing south
       for (int j = 0; j < i; j++)
       {
-        forward();
-        while(!bumpBottom || !bumpTop);
+        compass.read();
+        float wantedHeading = compass.heading();
+        while(!bumpBottom || !bumpTop)
+        {    
+          forward(50, wantedHeading);
+        }            
         brake();
         turn(South + (90 * j) % 360);
       }
@@ -419,8 +428,80 @@ void gridSearch()
 
 void moveUntilBump()
 {
-  forward();
-  while(!(bumpTop)){}
+  compass.read();
+  float wantedHeading = compass.heading();
+  while(!(bumpTop))
+  {
+    forward(50, wantedHeading);
+  }
+}
+
+void DeployClamp()
+{
+  for(int i = ClampUp; i > ClampDown; i-=5)
+  {
+    servoClampVerticleLeft.write(i);
+    servoClampVerticleRight.write(i);
+    delay (10);
+  }
+  servoClampGripLeft.write(ClampBack);
+  servoClampGripRight.write(ClampBack);
+}
+
+void ClimbRamp()
+{  
+  while(!(onRamp(0.85)))
+  {
+    delay(100);
+  }
+
+  DeployClamp();
+
+  forward(LeftMediumForward, RightMediumForward);
+  
+  delay(250);
+  
+  
+  while(analogRead(IRRightPin) > RightIRLimit && analogRead(IRLeftPin) > LeftIRLimit);
+  
+  compass.read();
+  float yAcceleration = compass.a.y;
+  
+  forward(LeftSlowForward, RightSlowForward);
+
+  delay(2500);
+    
+  for(int i = 10; i <=65; i++)
+  {
+    servoArm.write(i);
+    delay(60);
+  }
+  
+  delay(200);
+    
+  do
+  {
+    compass.read();
+  }
+  while(-0.75 * yAcceleration < compass.a.y);
+  
+  
+  delay(2000);
+  servoArm.write(10);
+
+  forward(LeftMediumForward, RightMediumForward);
+  
+  // Going down ramp
+  while(onRamp(0.9));
+  
+  servoClampGripLeft.write(ClampCenter);
+  servoClampGripRight.write(ClampCenter);
+  
+  servoClampVerticleLeft.write(ClampUp);
+  servoClampVerticleRight.write(ClampUp);  
+  
+  while(onRamp(0.99));  
+  
 }
 
 void setup() 
@@ -428,10 +509,16 @@ void setup()
   servoLeft.attach(servoLeftPin);
   servoRight.attach(servoRightPin);
   servoArm.attach(servoArmPin);
-  servoFlange.attach(servoFlangePin);
+  servoClampVerticleLeft.attach(servoClampVerticleLeftPin);
+  servoClampVerticleRight.attach(servoClampVerticleRightPin);
+  servoClampGripLeft.attach(servoClampGripLeftPin);
+  servoClampGripRight.attach(servoClampGripRightPin);
   
   servoArm.write(0);
-  servoFlange.write(FlangeUp);
+  servoClampVerticleLeft.write(ClampUp);
+  servoClampVerticleRight.write(ClampUp);
+  servoClampGripLeft.write(ClampCenter);
+  servoClampGripRight.write(ClampCenter);
   brake();
   
   pinMode(IRLeftPin, INPUT);
@@ -447,12 +534,12 @@ void setup()
   while(!bumpTop);
     
   lidar.initPWM(lidarTriggerPin, lidarMonitorPin);
-  
+   
   Wire.begin();
   compass.init();
   compass.enableDefault();  
-  compass.m_min = (LSM303::vector<int16_t>){  -2613,   -2248,  +2484};
-  compass.m_max = (LSM303::vector<int16_t>){  +1015,  +1103,  +3069};
+  compass.m_min = (LSM303::vector<int16_t>){  -2249,   -1448,  +2031};
+  compass.m_max = (LSM303::vector<int16_t>){  +855,  +2044,  +2803};
   
   delay(100);
   compass.read();  
@@ -460,142 +547,49 @@ void setup()
   initialGravity = compass.a.z;
   onRampGravity = initialGravity*0.80; // This should be 0.707*z at 45 degrees;
   
-  Serial.begin(9600);
+  //Serial.begin(9600);
   // Sets the servos to an initial position so that it does not move at start up 
-  delay(500);
+  //delay(5000);
 } 
 
 void loop() 
 {
 
   // Forward unitl hitting bump sensor.
- // moveUntilBump();
+  moveUntilBump();
   
   // Turn until the right heading
-  //turn(NorthEast);
+  forward(LeftFastForward, RightFastForward);
+  while(!bumpTop);
+  turn(NorthEast);
   forward(LeftFastForward, RightMediumForward);
   
   // Add course corrections as needed.
   
   // Drive forward until on ramp.
-  //forward();  
-  //forward(LeftSlowForward, RightSlowForward);
-  while(!(onRamp(0.8)))
-  {
-    delay(100);
-  }
+  
+  ClimbRamp();
 
-  forward(LeftMediumForward, RightMediumForward);
-  delay(1000); 
-
-  //forward(LeftSlowForward - 50, RightSlowForward);
-  //while(analogRead(IRRightPin) > RightIRLimit );
-  //forward(LeftSlowForward, RightSlowForward);
-  //delay(200);
-  servoFlange.write(FlangeDown);
-
-  //left();
-  //delay(5);
-  
-  //forward(LeftSlowForward, LeftSlowForward + 50);
-  //while(analogRead(IRRightPin) < RightIRLimit);
- 
-  forward(LeftMediumForward, RightMediumForward);
-  
-  delay(250);
-  
-  forward(LeftSlowForward, RightSlowForward + 25);
-
-  delay(2000);  
-  // Initial up ramp
-  /*while(onRamp(0.9))
-  {
-//    stayOnRamp();
-  }
-  */
-  
-  while(analogRead(IRRightPin) > RightIRLimit && analogRead(IRLeftPin) > LeftIRLimit);
-  
-  compass.read();
-  float yAcceleration = compass.a.y;
-  
-  //forward(LeftSlowForward, RightSlowForward + 50);
-   forward(LeftFastForward, RightFastForward);
-
-  delay(2500);
-  
-  forward(LeftFastForward, RightFastForward);
-
-  for(int i = 10; i <=65; i++)
-  {
-    servoArm.write(i);
-    delay(60);
-  }
-  
-  delay(200);
-  
-  forward(LeftSlowForward, RightSlowForward + 25);
-  
-  do
-  {
-    compass.read();
-  }
-  while(-0.75 * yAcceleration < compass.a.y);
-  
- /* 
-  while(!onRamp(0.85))
-  {
-  delay(10);
-  } 
-*/  
-  //forward(LeftStop + 100, RightStop - 50);
-  
-  delay(2000);
-  servoArm.write(10);
-
-  // Going down ramp
-  while(onRamp(0.9))
-  {
- //   stayOnRamp();
-  }  
-  servoFlange.write(FlangeUp);
-  
-  while(onRamp(0.99));  
-  
   brake(); 
-  /*
+ 
   // Search find and capture lego figure
   gridSearch();
   
   // Add course corrections as needed.
   // Drive forward until on ramp.
-  forward();  
-  while(!(onRamp())){}; // Set condition to check if on ramp.
-  
-  // Initial up ramp
-  while(onRamp())
-  {
-    stayOnRamp();
-  }
-  
-  // At the corner it drives straight over.
-  forward();
-  while(!onRamp()){}
-  
-  // Going down ramp
-  while(onRamp())
-  {
-    stayOnRamp();
-  }  
+  forward(LeftMediumForward, RightFastForward);
+  ClimbRamp();
+
   brake(); 
   
   // Dead reckoning back to base
-  forward();
+  forward(LeftFastForward, RightFastForward);
+  while(!bumpTop);
   delay(1000); //adjust so that it travels the right distance.
-  turn(west);  // Line up with base.  
+  turn(West);  // Line up with base.  
   moveUntilBump();
   deployTrap(); // Safely deposit person at base 2.  
-  */
+  
   while(1) // do nothing after the main loop.
   {
   }

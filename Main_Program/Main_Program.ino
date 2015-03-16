@@ -554,20 +554,16 @@ void setup()
 
 void loop() 
 {
-
   // Forward unitl hitting bump sensor.
-  moveUntilBump();
-  
-  // Turn until the right heading
   forward(LeftFastForward, RightFastForward);
   while(!bumpTop);
+  
+  // Turn until the right heading
   turn(NorthEast);
   forward(LeftFastForward, RightMediumForward);
   
   // Add course corrections as needed.
-  
-  // Drive forward until on ramp.
-  
+    
   ClimbRamp();
 
   brake(); 

@@ -55,13 +55,13 @@ int servoArmPin = 6;
 Servo servoArm;
 
 //Clamp
-int servoClampVerticleLeftPin = 7;
-Servo servoClampVerticleLeft;
-int servoClampVerticleRightPin = 8;
-Servo servoClampVerticleRight;
-int servoClampGripLeftPin = 9;
+int servoClampHingeLeftPin = 46;
+Servo servoClampHingeLeft;
+int servoClampHingeRightPin = 7;
+Servo servoClampHingeRight;
+int servoClampGripLeftPin = 44;
 Servo servoClampGripLeft;
-int servoClampGripRightPin = 10;
+int servoClampGripRightPin = 45;
 Servo servoClampGripRight;
 
 int bumpTopPin = 19;
@@ -440,8 +440,8 @@ void DeployClamp()
 {
   for(int i = ClampUp; i > ClampDown; i-=5)
   {
-    servoClampVerticleLeft.write(i);
-    servoClampVerticleRight.write(i);
+    servoClampHingeLeft.write(i);
+    servoClampHingeRight.write(i);
     delay (10);
   }
   servoClampGripLeft.write(ClampBack);
@@ -497,8 +497,8 @@ void ClimbRamp()
   servoClampGripLeft.write(ClampCenter);
   servoClampGripRight.write(ClampCenter);
   
-  servoClampVerticleLeft.write(ClampUp);
-  servoClampVerticleRight.write(ClampUp);  
+  servoClampHingeLeft.write(ClampUp);
+  servoClampHingeRight.write(ClampUp);  
   
   while(onRamp(0.99));  
   
@@ -509,16 +509,22 @@ void setup()
   servoLeft.attach(servoLeftPin);
   servoRight.attach(servoRightPin);
   servoArm.attach(servoArmPin);
-  servoClampVerticleLeft.attach(servoClampVerticleLeftPin);
-  servoClampVerticleRight.attach(servoClampVerticleRightPin);
+  servoClampHingeLeft.attach(servoClampHingeLeftPin);
+  servoClampHingeRight.attach(servoClampHingeRightPin);
   servoClampGripLeft.attach(servoClampGripLeftPin);
   servoClampGripRight.attach(servoClampGripRightPin);
   
   servoArm.write(0);
-  servoClampVerticleLeft.write(ClampUp);
-  servoClampVerticleRight.write(ClampUp);
+  /*servoClampHingeLeft.write(ClampUp);
+  servoClampHingeRight.write(ClampUp);
   servoClampGripLeft.write(ClampCenter);
   servoClampGripRight.write(ClampCenter);
+  */
+  servoClampHingeLeft.write(90);
+  servoClampHingeRight.write(90);
+  servoClampGripLeft.write(90);
+  servoClampGripRight.write(90);
+  
   brake();
   
   pinMode(IRLeftPin, INPUT);
@@ -547,13 +553,33 @@ void setup()
   initialGravity = compass.a.z;
   onRampGravity = initialGravity*0.80; // This should be 0.707*z at 45 degrees;
   
-  //Serial.begin(9600);
+  Serial.begin(9600);
   // Sets the servos to an initial position so that it does not move at start up 
   //delay(5000);
 } 
 
 void loop() 
 {
+  
+  int pos = 0;
+  while(1)
+  {
+    for (int i = 0; i < 180; i+=1)
+    {
+  //servoClampHingeLeft.write(i);
+  //servoClampHingeRight.write(i);
+  //servoClampGripLeft.write(i);
+ //servoClampGripRight.write(i);    
+        delay(50);
+
+    }
+    /*Serial.println(pos);
+    while(!bumpTop);
+    pos += 5;
+    pos %= 180;*/
+  }
+
+  
   // Forward unitl hitting bump sensor.
   forward(LeftFastForward, RightFastForward);
   while(!bumpTop);

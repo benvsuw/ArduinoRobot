@@ -39,6 +39,15 @@ const int ClampBack = 180;
 const int ClampCenter = 90;
 const int ClampFront = 0;
  
+const int ClampLeftHingeUp = 25;
+const int ClampRightHingeUp = 155;
+
+const int ClampLeftHingeDown = 160;
+const int ClampRightHingeDown = 20;
+
+const int ClampRightGripBack = 50;
+const int ClampLeftGripBack = 120;
+ 
 LSM303 compass;
 float heading;
 float initialHeading;
@@ -55,13 +64,13 @@ int servoArmPin = 6;
 Servo servoArm;
 
 //Clamp
-int servoClampHingeLeftPin = 46;
+int servoClampHingeLeftPin = 7;
 Servo servoClampHingeLeft;
-int servoClampHingeRightPin = 7;
+int servoClampHingeRightPin = 46;
 Servo servoClampHingeRight;
-int servoClampGripLeftPin = 44;
+int servoClampGripLeftPin = 45;
 Servo servoClampGripLeft;
-int servoClampGripRightPin = 45;
+int servoClampGripRightPin = 44;
 Servo servoClampGripRight;
 
 int bumpTopPin = 19;
@@ -72,8 +81,8 @@ int bumpBottomPin = 18;
 int bumpBottomInterrupt = 5;
 volatile boolean bumpBottom = false; // Triggered true by boolean. 
 
-int IRLeftPin = A0;
-int IRRightPin = A1;
+int IRLeftPin = A14;
+int IRRightPin = A15;
 
 Lidar lidar; //Create LIDAR object
 int lidarMonitorPin = 16;
@@ -520,8 +529,9 @@ void setup()
   servoClampGripLeft.write(ClampCenter);
   servoClampGripRight.write(ClampCenter);
   */
-  servoClampHingeLeft.write(90);
-  servoClampHingeRight.write(90);
+  servoClampHingeLeft.write(ClampLeftHingeUp);
+  servoClampHingeRight.write(ClampRightHingeUp);
+
   servoClampGripLeft.write(90);
   servoClampGripRight.write(90);
   
@@ -561,22 +571,32 @@ void setup()
 void loop() 
 {
   
-  int pos = 0;
   while(1)
   {
-    for (int i = 0; i < 180; i+=1)
-    {
-  //servoClampHingeLeft.write(i);
-  //servoClampHingeRight.write(i);
-  //servoClampGripLeft.write(i);
- //servoClampGripRight.write(i);    
-        delay(50);
+    Serial.println(analogRead(IRLeftPin));
+    delay(500);
+  }
+  
+  int pos = 90;
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+  
+  delay(1000);
+ 
+  servoClampGripLeft.write(ClampLeftGripBack);
+  servoClampGripRight.write(ClampRightGripBack);
+  
+  while(!bumpTop);
 
-    }
-    /*Serial.println(pos);
+  forward(LeftFastForward, RightFastForward);
+  while(1);
+  {
+    Serial.println(pos);
     while(!bumpTop);
+    servoClampGripLeft.write(pos);
     pos += 5;
-    pos %= 180;*/
+    pos %= 180;
+    delay(200);
   }
 
   

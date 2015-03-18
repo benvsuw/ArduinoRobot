@@ -135,15 +135,15 @@ void forward(int velPercent, float wantedHeading)
 
    
 
-   int leftRange = 1378-1160;
+   float leftRange = LeftStop - LeftFastForward;
 
-   int rightRange = 1535-1336;
-
+   float rightRange = RightFastForward - RightStop; 
+   
    
 
-   int leftSpeed = (velPercent*leftRange/100);
+   float leftSpeed = (velPercent*leftRange/100);
 
-   int rightSpeed = (velPercent*rightRange/100);
+   float rightSpeed = (velPercent*rightRange/100);
 
   
 
@@ -169,15 +169,15 @@ void forward(int velPercent, float wantedHeading)
 
    
 
-   leftSpeed = 1378 - leftSpeed;
+   leftSpeed = LeftStop - leftSpeed;
 
-   rightSpeed = 1336 + rightSpeed;
+   rightSpeed = RightStop + rightSpeed;
 
    
 
-   servoLeft.writeMicroseconds(leftSpeed);
+   servoLeft.writeMicroseconds((int)leftSpeed);
 
-   servoRight.writeMicroseconds(rightSpeed);
+   servoRight.writeMicroseconds((int)rightSpeed);
 
 }
 

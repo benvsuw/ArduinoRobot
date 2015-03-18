@@ -271,7 +271,7 @@ boolean onRamp(double percent) // Checks if on ramp.
   }
   
   gravity /= 5;
-  if(initialGravity * percent < gravity)
+  if(initialGravity * percent > gravity)
   {
     return true;
   }  
@@ -554,8 +554,8 @@ void setup()
   Wire.begin();
   compass.init();
   compass.enableDefault();  
-  compass.m_min = (LSM303::vector<int16_t>){  -2249,   -1448,  +2031};
-  compass.m_max = (LSM303::vector<int16_t>){  +855,  +2044,  +2803};
+  compass.m_min = (LSM303::vector<int16_t>){  -4525,   -5105,  -5919};
+  compass.m_max = (LSM303::vector<int16_t>){  +4215,  +2727,  +2075};
   
   delay(100);
   compass.read();  
@@ -599,13 +599,28 @@ void loop()
 
   }
 
-  delay(9000);
+  delay(13000);
   servoClampGripLeft.write(ClampLeftGripBack);
   servoClampGripRight.write(160);
-  delay(750);
+  delay(1000);
   servoClampGripRight.write(ClampRightGripBack);
 
-  //forward(LeftFastForward, RightFastForward);
+  delay(8000);
+  while(onRamp(12700/15800));
+  //brake();
+  
+  servoClampGripLeft.write(ClampLeftGripBack + 32);
+  servoClampGripRight.write(ClampRightGripBack - 32);
+  
+  delay(200);
+  
+  //brake();
+  //REverse
+  forward(RightFastForward, LeftFastForward);
+  
+  delay(750);
+  
+  forward(LeftSlowForward, RightSlowForward);
   while(1);
  {
     Serial.println(pos);

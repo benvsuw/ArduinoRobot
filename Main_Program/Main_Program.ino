@@ -42,11 +42,14 @@ const int ClampFront = 0;
 const int ClampLeftHingeUp = 25;
 const int ClampRightHingeUp = 155;
 
-const int ClampLeftHingeDown = 160;
-const int ClampRightHingeDown = 20;
+const int ClampLeftHingeDown = 155;
+const int ClampRightHingeDown = 25;
 
-const int ClampRightGripBack = 50;
-const int ClampLeftGripBack = 120;
+const int ClampRightGripBack = 20;//22;//17;
+const int ClampLeftGripBack = 151;//149;//155;
+
+const int ClampRightGripForward = 153;//155;
+const int ClampLeftGripForward = 22;
  
 LSM303 compass;
 float heading;
@@ -524,11 +527,7 @@ void setup()
   servoClampGripRight.attach(servoClampGripRightPin);
   
   servoArm.write(0);
-  /*servoClampHingeLeft.write(ClampUp);
-  servoClampHingeRight.write(ClampUp);
-  servoClampGripLeft.write(ClampCenter);
-  servoClampGripRight.write(ClampCenter);
-  */
+
   servoClampHingeLeft.write(ClampLeftHingeUp);
   servoClampHingeRight.write(ClampRightHingeUp);
 
@@ -571,26 +570,39 @@ void setup()
 void loop() 
 {
   
-  while(1)
-  {
-    Serial.println(analogRead(IRLeftPin));
-    delay(500);
-  }
-  
+
   int pos = 90;
   servoClampHingeLeft.write(ClampLeftHingeDown);
   servoClampHingeRight.write(ClampRightHingeDown);
   
   delay(1000);
  
-  servoClampGripLeft.write(ClampLeftGripBack);
-  servoClampGripRight.write(ClampRightGripBack);
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(ClampRightGripForward);
   
   while(!bumpTop);
 
   forward(LeftFastForward, RightFastForward);
-  while(1);
+
+  for (int i = 0; i <= 100 ; i+=1)
   {
+    //Left == 68
+    //Right = 65;
+      servoClampGripLeft.write(ClampLeftGripForward + i);
+      servoClampGripRight.write(ClampRightGripForward - i);
+      delay(20);
+
+  }
+
+  delay(9000);
+  servoClampGripLeft.write(ClampLeftGripBack);
+  servoClampGripRight.write(160);
+  delay(750);
+  servoClampGripRight.write(ClampRightGripBack);
+
+  //forward(LeftFastForward, RightFastForward);
+  while(1);
+ {
     Serial.println(pos);
     while(!bumpTop);
     servoClampGripLeft.write(pos);

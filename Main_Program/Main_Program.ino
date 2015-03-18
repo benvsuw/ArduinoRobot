@@ -1,3 +1,4 @@
+
 #include <Servo.h> 
 #include <Wire.h>
 #include <LSM303.h>
@@ -45,11 +46,11 @@ const int ClampRightHingeUp = 155;
 const int ClampLeftHingeDown = 155;
 const int ClampRightHingeDown = 25;
 
-const int ClampRightGripBack = 20;//22;//17;
-const int ClampLeftGripBack = 151;//149;//155;
+const int ClampRightGripBack = 28;//20;//22;//17;
+const int ClampLeftGripBack = 144;//151;//149;//155;
 
-const int ClampRightGripForward = 153;//155;
-const int ClampLeftGripForward = 22;
+const int ClampRightGripForward = 144;//153;//155;
+const int ClampLeftGripForward = 27;//22;
  
 LSM303 compass;
 float heading;
@@ -582,9 +583,13 @@ void loop()
   
   while(!bumpTop);
 
-  forward(LeftFastForward, RightFastForward);
+  //servoClampGripLeft.write(ClampLeftGripBack);
+  //servoClampGripRight.write(ClampRightGripBack);
+  
 
-  for (int i = 0; i <= 100 ; i+=1)
+  forward(LeftFastForward, RightFastForward);
+  //while(1);
+  for (int i = 0; i <= 110 ; i+=1)
   {
     //Left == 68
     //Right = 65;

@@ -30,8 +30,14 @@ const int LeftFastForward = 1160;
 const int RightFastForward = 1535;
 
 //IR
+const int LeftIRPipeValue = 160;
+const int RightIRPipeValue = 140;
+
+const int LeftIRFloorValue = 110;
+const int RightIRFloorValue = 60;
+
 const int LeftIRLimit = 110;
-const int RightIRLimit = 60;
+const int RightIRLimit = 50;
 
 //Clamp constants
 const int ClampUp = 180;
@@ -145,9 +151,15 @@ void forward(int velPercent, float wantedHeading)
    float leftSpeed = (velPercent*leftRange/100);
 
    float rightSpeed = (velPercent*rightRange/100);
-
-  
-
+   leftRange *= 2;
+   rightRange *= 2;
+  /* 
+   Serial.println("-----");
+   Serial.println(wantedHeading);
+   Serial.println(_heading);
+   Serial.println(adjustAngle);
+   delay(200);
+*/
    if (adjustAngle > 0) 
 
    {
@@ -233,7 +245,7 @@ boolean headingCheck(double offset)  // Checks that the heading is correct.
   float tempheading = compass.heading();
   float tolerance = 2.0;
   float wantedHeading = initialHeading + offset;  
-  
+
   if(wantedHeading > 360)
   {
     wantedHeading -= 360;
@@ -267,11 +279,11 @@ boolean onRamp(double percent) // Checks if on ramp.
   {
     compass.read();
     gravity += compass.a.z;
-    delay(20);
   }
   
   gravity /= 5;
-  if(initialGravity * percent > gravity)
+  //values are negative due to being mounted upside down, thus will be "bigger"
+  if(initialGravity * percent < gravity)
   {
     return true;
   }  
@@ -461,60 +473,71 @@ void DeployClamp()
   servoClampGripRight.write(ClampBack);
 }
 
+
 void ClimbRamp()
 {  
-  while(!(onRamp(0.85)))
+  //Test Grip
+  /*
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+  
+  delay(1000);
+ 
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(ClampRightGripForward);
+  
+  while(!bumpTop);
+  */
+  forward(LeftFastForward, RightFastForward-25);
+
+  //Segway Up Ramp
+  for (int i = 0; i <= 110 ; i+=1)
   {
-    delay(100);
+      servoClampGripLeft.write(ClampLeftGripForward + i);
+      servoClampGripRight.write(ClampRightGripForward - i);
+      delay(20);
   }
 
-  DeployClamp();
-
-  forward(LeftMediumForward, RightMediumForward);
+  delay(8000);
   
-  delay(250);
+  //while(!onRamp(0.85))
+  {
+    //Transistion to driving up ramp
+    delay(5000);
+    servoClampGripLeft.write(ClampLeftGripBack);
+    servoClampGripRight.write(160);
+    delay(1000);
+    servoClampGripRight.write(ClampRightGripBack);
+    delay(2000);
+  }
   
+  delay(6000);
   
-  while(analogRead(IRRightPin) > RightIRLimit && analogRead(IRLeftPin) > LeftIRLimit);
-  
-  compass.read();
-  float yAcceleration = compass.a.y;
-  
-  forward(LeftSlowForward, RightSlowForward);
-
-  delay(2500);
+  //Traverse Top / Backwards segway
+  //while(!onRamp(12700/15800));  
+  while(onRamp(0.80));
+    //forward(LeftSlowForward, RightSlowForward);
+  servoClampGripLeft.write(ClampLeftGripBack + 15);
+  servoClampGripRight.write(ClampRightGripBack - 15);
     
-  for(int i = 10; i <=65; i++)
-  {
-    servoArm.write(i);
-    delay(60);
-  }
+  delay(340);
+  //Reverse Drive
+  forward(RightFastForward, LeftFastForward);
   
-  delay(200);
-    
-  do
-  {
-    compass.read();
-  }
-  while(-0.75 * yAcceleration < compass.a.y);
+  delay(750);
   
+  // Forward down ramp
+  forward(LeftSlowForward, RightSlowForward-25);
   
-  delay(2000);
-  servoArm.write(10);
+  //Get off when IR sense bottom
+  while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
+  servoClampHingeLeft.write(ClampLeftHingeUp);
+  servoClampHingeRight.write(ClampRightHingeUp);
+  servoClampGripLeft.write(90);
+  servoClampGripRight.write(90);
+  
+  while(onRamp(0.95));
 
-  forward(LeftMediumForward, RightMediumForward);
-  
-  // Going down ramp
-  while(onRamp(0.9));
-  
-  servoClampGripLeft.write(ClampCenter);
-  servoClampGripRight.write(ClampCenter);
-  
-  servoClampHingeLeft.write(ClampUp);
-  servoClampHingeRight.write(ClampUp);  
-  
-  while(onRamp(0.99));  
-  
 }
 
 void setup() 
@@ -554,10 +577,12 @@ void setup()
   Wire.begin();
   compass.init();
   compass.enableDefault();  
-  compass.m_min = (LSM303::vector<int16_t>){  -4525,   -5105,  -5919};
-  compass.m_max = (LSM303::vector<int16_t>){  +4215,  +2727,  +2075};
+  //compass.m_min = (LSM303::vector<int16_t>){  -1341,   -2668,  +564};
+  //compass.m_max = (LSM303::vector<int16_t>){  +1395,  +2177,  +3502};
+  compass.m_min = (LSM303::vector<int16_t>){  -2684,   -2342,  -3412};
+  compass.m_max = (LSM303::vector<int16_t>){  +1721,  +3093,  +1501};
   
-  delay(100);
+  delay(500);
   compass.read();  
   initialHeading = compass.heading();
   initialGravity = compass.a.z;
@@ -565,82 +590,70 @@ void setup()
   
   Serial.begin(9600);
   // Sets the servos to an initial position so that it does not move at start up 
-  //delay(5000);
 } 
 
 void loop() 
-{
-  
-
-  int pos = 90;
-  servoClampHingeLeft.write(ClampLeftHingeDown);
-  servoClampHingeRight.write(ClampRightHingeDown);
-  
-  delay(1000);
- 
-  servoClampGripLeft.write(ClampLeftGripForward);
-  servoClampGripRight.write(ClampRightGripForward);
+{ 
   
   while(!bumpTop);
-
-  //servoClampGripLeft.write(ClampLeftGripBack);
-  //servoClampGripRight.write(ClampRightGripBack);
-  
-
-  forward(LeftFastForward, RightFastForward);
+/*
+  /// Forward unitl hitting bump sensor.
+  //forward(LeftFastForward, RightFastForward);
   //while(1);
-  for (int i = 0; i <= 110 ; i+=1)
+  //delay(20000);
+  //turn(NorthEast);
+   // while(1);
+
+  //servoClampGripLeft.write(ClampLeftGripBack + 10);
+  //servoClampGripRight.write(ClampRightGripBack - 10);
+  //Due to bump sensor not being complete use IR for now
+  compass.read();
+  float head = compass.heading();
+  //long time = millis();
+  //while(analogRead(IRLeftPin) < LeftIRPipeValue && analogRead(IRRightPin) < RightIRPipeValue)
+  
+  while(1)
   {
-    //Left == 68
-    //Right = 65;
-      servoClampGripLeft.write(ClampLeftGripForward + i);
-      servoClampGripRight.write(ClampRightGripForward - i);
-      delay(20);
-
+    forward(50, head);
   }
-
-  delay(13000);
-  servoClampGripLeft.write(ClampLeftGripBack);
-  servoClampGripRight.write(160);
-  delay(1000);
-  servoClampGripRight.write(ClampRightGripBack);
-
-  delay(8000);
-  while(onRamp(12700/15800));
-  //brake();
   
-  servoClampGripLeft.write(ClampLeftGripBack + 32);
-  servoClampGripRight.write(ClampRightGripBack - 32);
-  
-  delay(200);
-  
-  //brake();
-  //REverse
-  forward(RightFastForward, LeftFastForward);
-  
-  delay(750);
-  
-  forward(LeftSlowForward, RightSlowForward);
+  brake();
   while(1);
- {
-    Serial.println(pos);
-    while(!bumpTop);
-    servoClampGripLeft.write(pos);
-    pos += 5;
-    pos %= 180;
-    delay(200);
+  //turn(NorthEast);
+  while(!onRamp(0.85))
+  {
+     forward(50, head - 90);
   }
 
-  
-  // Forward unitl hitting bump sensor.
-  forward(LeftFastForward, RightFastForward);
-  while(!bumpTop);
+  //while(!bumpTop);
   
   // Turn until the right heading
-  turn(NorthEast);
-  forward(LeftFastForward, RightMediumForward);
+  //turn(NorthEast);
+  delay(2000);
+  int left = LeftFastForward;
+  int right = RightFastForward;
+ // forward(left, right);
+  
+  compass.read();
+  float head = compass.heading();
+  */
+  forward(LeftFastForward, RightFastForward);
   
   // Add course corrections as needed.
+  
+  while(!onRamp(0.85));
+  brake();
+    delay(1000);
+  servoClampGripLeft.write(ClampLeftGripForward +5);
+  servoClampGripRight.write(ClampRightGripForward - 5);
+    delay(1000);
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+    delay(1000);
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(ClampRightGripForward);
+    delay(1000);
+  
     
   ClimbRamp();
 

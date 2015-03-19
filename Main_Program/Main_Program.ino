@@ -696,6 +696,118 @@ void GetOffBase()
   servoClampGripRight.write(90);
 }
 
+void rotate(int angle)
+{
+  if(angle > 0)// TODO: remove if. For testing.
+  {
+    servoClampGripLeft.write(ClampLeftGripForward);
+    servoClampGripRight.write(155);
+    delay(1000);
+  
+    servoClampHingeLeft.write(ClampLeftHingeUp);
+    servoClampHingeRight.write(ClampRightHingeUp);
+    delay(1000);
+    
+    for(int i =0; i < 5; i++)
+    {
+      //servoClampGripLeft.write(ClampLeftGripForward); 
+      
+      servoClampGripLeft.write(ClampLeftGripBack);
+      delay(500);
+      servoClampHingeLeft.write(ClampLeftHingeDown - 15);
+      delay(500);
+      servoClampGripLeft.write(ClampLeftGripForward);
+      delay(500);
+      servoClampHingeLeft.write(ClampLeftHingeUp); 
+      delay(500);
+    }
+  //////////////////////////////////
+  //const int ClampLeftHingeUp = 25;
+  //const int ClampRightHingeUp = 155;
+  
+  //const int ClampLeftHingeDown = 155;
+  //const int ClampRightHingeDown = 25;
+  
+  //const int ClampRightGripBack = 28;//20;//22;//17;
+  //const int ClampLeftGripBack = 144;//151;//149;//155;
+  
+  //const int ClampRightGripForward = 144;//153;//155;
+  //const int ClampLeftGripForward = 27;//22;
+  //////////////////////////////////    
+    
+  }
+  else
+  {// method 2
+    // Initialize position
+    servoClampHingeLeft.write(ClampLeftHingeUp);
+    servoClampHingeRight.write(ClampRightHingeUp);
+    delay(1000);
+  
+    servoClampGripLeft.write(ClampLeftGripBack);
+    servoClampGripRight.write(155);
+    delay(1000);
+    
+    //for (int i =0; i < 2; i++)
+    {
+      servoClampHingeLeft.write(ClampLeftHingeUp+47);
+      //servoClampHingeRight.write(ClampRightHingeUp-47);
+      delay(1000);
+      
+      servoClampGripLeft.write(ClampLeftGripForward);
+      //servoClampGripRight.write(ClampRightGripBack);
+      delay(1000);
+      
+      servoClampHingeLeft.write(ClampLeftHingeUp);
+      //servoClampHingeRight.write(ClampRightHingeUp);
+      delay(1000);
+      
+      servoClampGripLeft.write(ClampLeftGripBack);
+      //servoClampGripRight.write(ClampRightGripForward);
+      delay(1000);
+    }
+    {
+      servoClampHingeLeft.write(ClampLeftHingeUp+54);
+      servoClampHingeRight.write(ClampRightHingeUp-54);
+      delay(1000);
+      
+      servoClampGripLeft.write(ClampLeftGripForward);
+      servoClampGripRight.write(ClampRightGripBack);
+      delay(1000);
+      
+      servoClampHingeLeft.write(ClampLeftHingeUp);
+      servoClampHingeRight.write(ClampRightHingeUp);
+      delay(1000);
+      
+      servoClampGripLeft.write(ClampLeftGripBack);
+      servoClampGripRight.write(ClampRightGripForward);
+      delay(1000);
+    }
+    
+    
+  }
+  
+  //////////////////////////////////
+  //const int ClampLeftHingeUp = 25;
+  //const int ClampRightHingeUp = 155;
+  
+  //const int ClampLeftHingeDown = 155;
+  //const int ClampRightHingeDown = 25;
+  
+  //const int ClampRightGripBack = 28;//20;//22;//17;
+  //const int ClampLeftGripBack = 144;//151;//149;//155;
+  
+  //const int ClampRightGripForward = 144;//153;//155;
+  //const int ClampLeftGripForward = 27;//22;
+  //////////////////////////////////
+  
+  
+  //forward(1294, RightSlowForward);
+  
+  //delay(7000);
+  
+  //forward(RightFastForward, RightFastForward);
+}
+
 void loop() 
 { 
   //while(!bumpTop);

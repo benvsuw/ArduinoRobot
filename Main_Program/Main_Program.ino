@@ -667,11 +667,42 @@ void forwardLidar(int leftSpeed, int rightSpeed)
   
 }
 
+void GetOffBase()
+{
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(155);
+      delay(1000);
+
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+  delay(1000);
+  
+  forwardLidar(1294, RightSlowForward);
+  
+  delay(5000);
+  
+  for (int i = 0; i < 20; i++)
+  {
+      servoClampGripLeft.write(ClampLeftGripForward - i);
+      servoClampGripRight.write(155 + i);
+      delay(60);
+  }
+  
+  servoClampHingeLeft.write(ClampLeftHingeUp);
+  servoClampHingeRight.write(ClampRightHingeUp);
+  delay(1000);
+  servoClampGripLeft.write(90);
+  servoClampGripRight.write(90);
+}
+
 void loop() 
 { 
   
   //while(!bumpTop);
 
+  GetOffBase();
+  
+  //Traverse to Pipe
   while(!bumpTop)
   {
     forwardLidar(1294, RightSlowForward);

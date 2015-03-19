@@ -14,6 +14,9 @@ const float NorthEast = 297.5;
 const float South = 90.0;
 const float East = 0;
 const float West = 180.0;
+
+const int trapDown = 155;
+const int trapUp= 90;
  
 //Speed
 //Stop
@@ -59,7 +62,7 @@ const int ClampRightGripForward = 144;//153;//155;
 const int ClampLeftGripForward = 27;//22;
  
 LSM303 compass;
-float heading;
+ float heading;
 float initialHeading;
 float gravity;
 float initialGravity;
@@ -279,6 +282,7 @@ boolean onRamp(double percent) // Checks if on ramp.
   {
     compass.read();
     gravity += compass.a.z;
+    delay(10);
   }
   
   gravity /= 5;
@@ -488,10 +492,10 @@ void ClimbRamp()
   
   while(!bumpTop);
   */
-  forward(LeftFastForward, RightFastForward-25);
+  forward(LeftFastForward, RightFastForward);
 
   //Segway Up Ramp
-  for (int i = 0; i <= 110 ; i+=1)
+  for (int i = 0; i <= 105 ; i+=1)
   {
       servoClampGripLeft.write(ClampLeftGripForward + i);
       servoClampGripRight.write(ClampRightGripForward - i);
@@ -504,38 +508,45 @@ void ClimbRamp()
   {
     //Transistion to driving up ramp
     delay(5000);
+    servoArm.write(trapDown);
+    delay(1000);
     servoClampGripLeft.write(ClampLeftGripBack);
     servoClampGripRight.write(160);
-    delay(1000);
+
+    delay(2000);
     servoClampGripRight.write(ClampRightGripBack);
     delay(2000);
   }
-  
-  delay(6000);
+
+  delay(2000);
   
   //Traverse Top / Backwards segway
   //while(!onRamp(12700/15800));  
-  while(onRamp(0.80));
+  while(onRamp(0.78));
     //forward(LeftSlowForward, RightSlowForward);
   servoClampGripLeft.write(ClampLeftGripBack + 15);
   servoClampGripRight.write(ClampRightGripBack - 15);
     
-  delay(340);
+  //delay(200);
   //Reverse Drive
-  forward(RightFastForward, LeftFastForward);
+  //forward(RightFastForward, LeftFastForward);
+  
   
   delay(750);
   
+  
   // Forward down ramp
-  forward(LeftSlowForward, RightSlowForward-25);
+  forward(LeftSlowForward, RightSlowForward);
+  servoArm.write(trapUp);
   
   //Get off when IR sense bottom
-  while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
+  /*while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
+  dely(100);
   servoClampHingeLeft.write(ClampLeftHingeUp);
   servoClampHingeRight.write(ClampRightHingeUp);
   servoClampGripLeft.write(90);
   servoClampGripRight.write(90);
-  
+  */
   while(onRamp(0.95));
 
 }
@@ -550,7 +561,7 @@ void setup()
   servoClampGripLeft.attach(servoClampGripLeftPin);
   servoClampGripRight.attach(servoClampGripRightPin);
   
-  servoArm.write(0);
+  servoArm.write(trapUp);
 
   servoClampHingeLeft.write(ClampLeftHingeUp);
   servoClampHingeRight.write(ClampRightHingeUp);
@@ -579,8 +590,8 @@ void setup()
   compass.enableDefault();  
   //compass.m_min = (LSM303::vector<int16_t>){  -1341,   -2668,  +564};
   //compass.m_max = (LSM303::vector<int16_t>){  +1395,  +2177,  +3502};
-  compass.m_min = (LSM303::vector<int16_t>){  -2684,   -2342,  -3412};
-  compass.m_max = (LSM303::vector<int16_t>){  +1721,  +3093,  +1501};
+  compass.m_min = (LSM303::vector<int16_t>){  -1179,  -2460,   -742};
+  compass.m_max = (LSM303::vector<int16_t>){  +2222,  +3597,  +3278};
   
   delay(500);
   compass.read();  
@@ -596,6 +607,45 @@ void loop()
 { 
   
   while(!bumpTop);
+
+
+ forward(1294, RightSlowForward);
+
+  lidar.on();
+  int val = lidar.scan();
+  while(val > 150)
+  {
+  
+  val = lidar.scan();
+  
+  delay(20);
+  }
+  
+  delay(3000);
+
+  forward(RightMediumForward, RightMediumForward);
+  delay(3300);
+  forward(1294, RightSlowForward);
+  while(!bumpTop);
+  brake();
+  
+  servoArm.write(trapDown);
+  delay(2000);
+  servoArm.write(trapUp);
+  delay(500);
+  
+  forward(RightMediumForward, RightMediumForward);
+  delay(6600); 
+  
+  forward(1294, RightSlowForward);
+  delay(20000);
+  forward(LeftMediumForward, LeftMediumForward);
+  delay(3300);
+  forward(LeftMediumForward, RightFastForward);
+
+  
+   
+  while(1);
 /*
   /// Forward unitl hitting bump sensor.
   //forward(LeftFastForward, RightFastForward);
@@ -641,7 +691,7 @@ void loop()
   
   // Add course corrections as needed.
   
-  while(!onRamp(0.85));
+  while(!onRamp(0.75));
   brake();
     delay(1000);
   servoClampGripLeft.write(ClampLeftGripForward +5);

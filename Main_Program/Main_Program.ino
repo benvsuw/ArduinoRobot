@@ -603,11 +603,104 @@ void setup()
   // Sets the servos to an initial position so that it does not move at start up 
 } 
 
+
+void forwardLidar(int leftSpeed, int rightSpeed)
+{
+ 
+  static int runningAvg; 
+  servoLeft.write(leftSpeed);
+  servoRight.write(rightSpeed);  
+  int reading = lidar.scan();
+  delay(50);
+  int reading2 = lidar.scan();
+  // Error checking
+  if (reading2 > 300 || reading > 300)
+  {
+    return;
+  }
+  if (runningAvg == 0)
+  {
+    //runningAvg = (reading + reading2) / 2;
+  }
+  else 
+  {
+    //runningAvg *= 0.75;
+    //runningAvg += ((reading + reading2) / 2)*0.25;
+  }
+  // Cases
+  int diff = reading2 - reading; 
+  int diffTol = 10;
+  
+  if (abs(diff)  > diffTol)
+  {
+    // Assume we've seen a corner. Reset.
+    //runningAvg = reading2;
+    
+    servoLeft.write(leftSpeed);
+    servoRight.write(rightSpeed);
+  }
+  else if (abs(diff) >= 1) // correction tolerance 
+  {
+    // Valid difference. Find direction
+    //if (diff > 0) 
+    {
+      // Further away from wall. Correct towards Lidar
+      servoLeft.write(leftSpeed + diff*10);
+      servoRight.write(rightSpeed + diff*10);
+    }
+    /*else if (diff < 0)
+    {
+      servoLeft.write(leftSpeed-50);
+      servoRight.write(rightSpeed-50);
+    }*/
+  }
+  else
+  {
+    // Default if no error
+    servoLeft.write(leftSpeed);
+    servoRight.write(rightSpeed);
+  }
+  
+  //runningAvg *= 0.75; 
+  //runningAvg
+ delay(300); 
+  
+}
+
 void loop() 
 { 
   
-  while(!bumpTop);
+  //while(!bumpTop);
 
+  while(!bumpTop)
+  {
+    forwardLidar(1294, RightSlowForward);
+  }
+  
+  forward(RightMediumForward, RightMediumForward);
+  delay(1000);
+  forward(LeftFastForward, RightMediumForward);
+
+  while(!bumpTop && !onRamp(0.85));
+  forward(LeftFastForward, RightFastForward);
+
+  //Grip
+  while(!onRamp(0.85));
+
+    brake();
+    delay(1000);
+  servoClampGripLeft.write(ClampLeftGripForward +5);
+  servoClampGripRight.write(ClampRightGripForward - 5);
+    delay(1000);
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+    delay(1000);
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(ClampRightGripForward);
+    delay(1000);
+   
+  ClimbRamp();
+  while(1)  
 
  forward(1294, RightSlowForward);
 
@@ -624,9 +717,12 @@ void loop()
   delay(3000);
 
   forward(RightMediumForward, RightMediumForward);
-  delay(3300);
+  delay(4000);
   forward(1294, RightSlowForward);
-  while(!bumpTop);
+  while(!bumpTop)
+  {
+    forwardLidar(1294, RightSlowForward);
+  }
   brake();
   
   servoArm.write(trapDown);
@@ -634,8 +730,12 @@ void loop()
   servoArm.write(trapUp);
   delay(500);
   
+  forwardLidar(RightSlowForward, 1294);
+  
+  delay(2000);
+  
   forward(RightMediumForward, RightMediumForward);
-  delay(6600); 
+  delay(9900); 
   
   forward(1294, RightSlowForward);
   delay(20000);

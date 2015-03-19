@@ -23,7 +23,7 @@ const int trapUp= 90;
 const int LeftStop = 1378;
 const int RightStop = 1336;
 //Slow Forward
-const int LeftSlowForward = 1310;
+const int LeftSlowForward = 1294;
 const int RightSlowForward = 1400;
 //Medium Forward
 const int LeftMediumForward = 1209;
@@ -36,10 +36,10 @@ const int RightFastForward = 1535;
 const int LeftIRPipeValue = 160;
 const int RightIRPipeValue = 140;
 
-const int LeftIRFloorValue = 110;
-const int RightIRFloorValue = 60;
+const int LeftIRFloorValue = 120;
+const int RightIRFloorValue = 90;
 
-const int LeftIRLimit = 110;
+const int LeftIRLimit = 130;
 const int RightIRLimit = 50;
 
 //Clamp constants
@@ -495,7 +495,7 @@ void ClimbRamp()
   forward(LeftFastForward, RightFastForward);
 
   //Segway Up Ramp
-  for (int i = 0; i <= 105 ; i+=1)
+  for (int i = 0; i <= 97 ; i+=1)
   {
       servoClampGripLeft.write(ClampLeftGripForward + i);
       servoClampGripRight.write(ClampRightGripForward - i);
@@ -509,7 +509,7 @@ void ClimbRamp()
     //Transistion to driving up ramp
     delay(5000);
     servoArm.write(trapDown);
-    delay(1000);
+    delay(1500);
     servoClampGripLeft.write(ClampLeftGripBack);
     servoClampGripRight.write(160);
 
@@ -541,15 +541,15 @@ void ClimbRamp()
   
   //Get off when IR sense bottom
   while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
-  delay(13000);
+  delay(8000);
+
+  
+  while(onRamp(0.97));
   servoClampHingeLeft.write(ClampLeftHingeUp);
-  servoClampHingeRight.write(ClampRightHingeUp);\
+  servoClampHingeRight.write(ClampRightHingeUp);
   delay(1000);
   servoClampGripLeft.write(90);
   servoClampGripRight.write(90);
-  
-  while(onRamp(0.95));
-
 }
 
 void setup() 
@@ -637,8 +637,8 @@ void forwardLidar(int leftSpeed, int rightSpeed)
     // Assume we've seen a corner. Reset.
     //runningAvg = reading2;
     
-    servoLeft.write(leftSpeed);
-    servoRight.write(rightSpeed);
+    servoLeft.writeMicroseconds(leftSpeed);
+    servoRight.writeMicroseconds(rightSpeed);
   }
   else if (abs(diff) >= 1) // correction tolerance 
   {
@@ -646,8 +646,8 @@ void forwardLidar(int leftSpeed, int rightSpeed)
     //if (diff > 0) 
     {
       // Further away from wall. Correct towards Lidar
-      servoLeft.write(leftSpeed + diff*10);
-      servoRight.write(rightSpeed + diff*10);
+      servoLeft.writeMicroseconds(leftSpeed + diff*10);
+      servoRight.writeMicroseconds(rightSpeed + diff*10);
     }
     /*else if (diff < 0)
     {
@@ -658,8 +658,8 @@ void forwardLidar(int leftSpeed, int rightSpeed)
   else
   {
     // Default if no error
-    servoLeft.write(leftSpeed);
-    servoRight.write(rightSpeed);
+    servoLeft.writeMicroseconds(leftSpeed);
+    servoRight.writeMicroseconds(rightSpeed);
   }
   
   //runningAvg *= 0.75; 
@@ -678,9 +678,9 @@ void GetOffBase()
   servoClampHingeRight.write(ClampRightHingeDown);
   delay(1000);
   
-  forwardLidar(1294, RightSlowForward);
+  forward(LeftSlowForward, RightSlowForward);
   
-  delay(5000);
+  delay(10000);
   
   for (int i = 0; i < 20; i++)
   {
@@ -698,19 +698,18 @@ void GetOffBase()
 
 void loop() 
 { 
-  
   //while(!bumpTop);
  
   GetOffBase();
   
   //Traverse to Pipe
-  while(!bumpTop);
+  while(!bumpTop)
   {
-   // forwardLidar(1294, RightSlowForward);
+    forwardLidar(LeftSlowForward, RightSlowForward);
   }
   
   forward(RightMediumForward, RightMediumForward);
-  delay(1000);
+  delay(500);
   forward(LeftFastForward, RightMediumForward);
 
   //while(bumpTop && !onRamp(0.85));
@@ -734,23 +733,27 @@ void loop()
   ClimbRamp();
   
   forward(1294, RightSlowForward);
-
+  
+  lidar.off();
+  delay(100);
   lidar.on();
+  delay(200);
   int val = lidar.scan();
   while(val > 150)
   {
     val = lidar.scan();
-    delay(50);
+    delay(20);
   }
-  
+  lidar.off();
+
   delay(3000);
 
   forward(RightMediumForward, RightMediumForward);
-  delay(4000);
-  forward(1294, RightSlowForward);
+  delay(1250);
+  forward(LeftSlowForward, RightSlowForward);
   while(!bumpTop)
   {
-    forwardLidar(1294, RightSlowForward);
+    forwardLidar(LeftSlowForward, RightSlowForward);
   }
   brake();
   
@@ -759,29 +762,24 @@ void loop()
   servoArm.write(trapUp);
   delay(500);
   
-  forwardLidar(RightSlowForward, 1294);
+  //reverse
+  forwardLidar(RightSlowForward, LeftSlowForward);
   
   delay(2000);
-  
+  //180
   forward(RightFastForward, RightFastForward);
-  delay(9900); 
+  delay(2500); 
   
   forward(1294, RightSlowForward);
-  delay(20000);
-  forward(LeftMediumForward, LeftMediumForward);
-  delay(3300);
-  forward(LeftMediumForward, RightFastForward);
-
-    while(!bumpTop);
+  while(!bumpTop);
   {
-   // forwardLidar(1294, RightSlowForward);
+    forwardLidar(LeftSlowForward, RightSlowForward);
   }
   
-  forward(RightMediumForward, RightMediumForward);
+  //90
+  forward(LeftMediumForward, LeftMediumForward);
   delay(1000);
-  forward(LeftFastForward, RightMediumForward);
-
-  //while(bumpTop && !onRamp(0.85));
+  //drive onto ramp
   forward(LeftFastForward, RightFastForward);
 
   //Grip
@@ -801,6 +799,12 @@ void loop()
    
   ClimbRamp();
   forward(1294, RightSlowForward);
+   
+  //Turn 90
+ 
+  //drive to base
+   
+  //redploy trap 
    
   while(1);
 /*

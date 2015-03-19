@@ -540,13 +540,14 @@ void ClimbRamp()
   servoArm.write(trapUp);
   
   //Get off when IR sense bottom
-  /*while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
-  dely(100);
+  while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
+  delay(13000);
   servoClampHingeLeft.write(ClampLeftHingeUp);
-  servoClampHingeRight.write(ClampRightHingeUp);
+  servoClampHingeRight.write(ClampRightHingeUp);\
+  delay(1000);
   servoClampGripLeft.write(90);
   servoClampGripRight.write(90);
-  */
+  
   while(onRamp(0.95));
 
 }
@@ -699,50 +700,47 @@ void loop()
 { 
   
   //while(!bumpTop);
-
+ 
   GetOffBase();
   
   //Traverse to Pipe
-  while(!bumpTop)
+  while(!bumpTop);
   {
-    forwardLidar(1294, RightSlowForward);
+   // forwardLidar(1294, RightSlowForward);
   }
   
   forward(RightMediumForward, RightMediumForward);
   delay(1000);
   forward(LeftFastForward, RightMediumForward);
 
-  while(!bumpTop && !onRamp(0.85));
+  //while(bumpTop && !onRamp(0.85));
   forward(LeftFastForward, RightFastForward);
 
   //Grip
   while(!onRamp(0.85));
 
-    brake();
-    delay(1000);
+  brake();
+  delay(1000);
   servoClampGripLeft.write(ClampLeftGripForward +5);
   servoClampGripRight.write(ClampRightGripForward - 5);
-    delay(1000);
+  delay(1000);
   servoClampHingeLeft.write(ClampLeftHingeDown);
   servoClampHingeRight.write(ClampRightHingeDown);
-    delay(1000);
+  delay(1000);
   servoClampGripLeft.write(ClampLeftGripForward);
   servoClampGripRight.write(ClampRightGripForward);
-    delay(1000);
+  delay(1000);
    
   ClimbRamp();
-  while(1)  
-
- forward(1294, RightSlowForward);
+  
+  forward(1294, RightSlowForward);
 
   lidar.on();
   int val = lidar.scan();
   while(val > 150)
   {
-  
-  val = lidar.scan();
-  
-  delay(20);
+    val = lidar.scan();
+    delay(50);
   }
   
   delay(3000);
@@ -765,7 +763,7 @@ void loop()
   
   delay(2000);
   
-  forward(RightMediumForward, RightMediumForward);
+  forward(RightFastForward, RightFastForward);
   delay(9900); 
   
   forward(1294, RightSlowForward);
@@ -774,7 +772,35 @@ void loop()
   delay(3300);
   forward(LeftMediumForward, RightFastForward);
 
+    while(!bumpTop);
+  {
+   // forwardLidar(1294, RightSlowForward);
+  }
   
+  forward(RightMediumForward, RightMediumForward);
+  delay(1000);
+  forward(LeftFastForward, RightMediumForward);
+
+  //while(bumpTop && !onRamp(0.85));
+  forward(LeftFastForward, RightFastForward);
+
+  //Grip
+  while(!onRamp(0.85));
+
+  brake();
+  delay(1000);
+  servoClampGripLeft.write(ClampLeftGripForward +5);
+  servoClampGripRight.write(ClampRightGripForward - 5);
+  delay(1000);
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+  delay(1000);
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(ClampRightGripForward);
+  delay(1000);
+   
+  ClimbRamp();
+  forward(1294, RightSlowForward);
    
   while(1);
 /*
@@ -868,10 +894,7 @@ void ISR_BUMP_TOP()
   // Double check that arduinon automaticaly resets the register for me.
   
   //Pin is normally High, Low when button pressed
-  Serial.println("TOP");
-  Serial.println(digitalRead(bumpTopPin));
   bumpTop = (digitalRead(bumpTopPin) == LOW);
-  Serial.println(bumpTop);
 }
 
 void ISR_BUMP_BOTTOM()
@@ -879,6 +902,5 @@ void ISR_BUMP_BOTTOM()
   // Double check that arduinon automaticaly resets the register for me.
   
   //Pin is normally High, Low when button pressed
-  Serial.println("bottom");
   bumpBottom = (digitalRead(bumpBottomPin) == LOW);
 }

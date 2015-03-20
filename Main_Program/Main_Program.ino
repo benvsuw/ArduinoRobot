@@ -171,11 +171,11 @@ void ClimbRamp()
   
   //Get off when IR sense bottom
   while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
-  delay(1000);
+  delay(3000);
 
   
   while(onRamp(0.96));
-  delay(2000);
+  delay(3000);
   servoClampHingeLeft.write(ClampLeftHingeUp);
   servoClampHingeRight.write(ClampRightHingeUp);
   delay(1000);
@@ -365,7 +365,7 @@ void TurnLeftWall()
       delay(1000);
       
       servoClampGripLeft.write(27);//27
-      servoClampGripRight.write(28);//28
+      servoClampGripRight.write(50);//28
       delay(1000);
       
       servoClampHingeLeft.write(25);//25
@@ -463,7 +463,7 @@ void Turn180()
   
     int leftHingeRange = _LeftHingeDown - _LeftHingeUp;
     int rightHingeRange = _RightHingeUp - _RightHingeDown;
-    int gripRange = 32;
+    int gripRange = 31;
   
     for(int i=0; i < 4; i++)
     {
@@ -547,7 +547,7 @@ void TurnWallOne()
   forward(LeftFastForward, RightFastForward);
   delay(600);
   brake();
-  rotate(4);
+  rotate(3);
 }
 
 void TurnWallTwo()
@@ -608,13 +608,7 @@ void loop()
   while(!bumpTop);
   delay(1000);
   TurnWallOne();
-  /*
-  forward(RightMediumForward, LeftMediumForward);
-  delay(800);
-  
-  forward(RightMediumForward, RightMediumForward);
-  delay(355);
-  */
+
   // 4 wheel drive
   servoClampGripLeft.write(ClampLeftGripForward);
   servoClampGripRight.write(155);
@@ -657,7 +651,8 @@ void loop()
   ClimbRamp();
   brake();
   delay(4000);
-  forward(LeftSlowForward - 30, RightSlowForward);
+
+  forward(LeftMediumForward, RightSlowForward);
   
   lidar.on();
   delay(200);
@@ -670,17 +665,19 @@ void loop()
   }
   lidar.off();
 
-  delay(7000);
+  delay(6705);
   
   //Turn Left
   brake();
   
   TurnLeftWall();
   
+  GetOffBase();
+
   forward(LeftSlowForward, RightSlowForward);
-  while(!bumpTop)
+  while(!bumpTop);
   {
-    forwardLidar(LeftSlowForward, RightSlowForward);
+  //  forwardLidar(LeftSlowForward, RightSlowForward);
   }
   brake();
   
@@ -692,11 +689,10 @@ void loop()
 //Turn 180
   Turn180();
   
+  GetOffBase();
+  
   forward(LeftSlowForward, RightSlowForward);
   while(!bumpTop);
-  {
-    forwardLidar(LeftSlowForward, RightSlowForward);
-  }
 
   TurnWallTwo();
 
@@ -744,7 +740,7 @@ void loop()
   ClimbRamp();
   
   forward(LeftMediumForward, RightFastForward);
-  delay(8000); 
+  delay(5500); 
    
   //Turn 90
   brake();

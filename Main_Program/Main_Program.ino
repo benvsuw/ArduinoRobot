@@ -159,8 +159,8 @@ void ClimbRamp()
   //while(!onRamp(12700/15800));  
   while(onRamp(0.78));
     //forward(LeftSlowForward, RightSlowForward);
-  servoClampGripLeft.write(ClampLeftGripBack + 15);
-  servoClampGripRight.write(ClampRightGripBack - 15);
+  servoClampGripLeft.write(ClampLeftGripBack + 14);
+  servoClampGripRight.write(ClampRightGripBack - 14);
   
   delay(750);
   
@@ -171,11 +171,11 @@ void ClimbRamp()
   
   //Get off when IR sense bottom
   while(analogRead(IRLeftPin) < LeftIRFloorValue && analogRead(IRRightPin) < RightIRFloorValue);  
-  delay(8000);
+  delay(1000);
 
   
   while(onRamp(0.96));
-  delay(5000);
+  delay(2000);
   servoClampHingeLeft.write(ClampLeftHingeUp);
   servoClampHingeRight.write(ClampRightHingeUp);
   delay(1000);
@@ -274,28 +274,30 @@ void forwardLidar(int leftSpeed, int rightSpeed)
   else if (abs(diff) >= 1) // correction tolerance 
   {
     // Valid difference. Find direction
-    //if (diff > 0) 
+    if (diff > 0) 
     {
       // Further away from wall. Correct towards Lidar
-      servoLeft.writeMicroseconds(leftSpeed + diff*10);
-      servoRight.writeMicroseconds(rightSpeed + diff*10);
+      servoLeft.writeMicroseconds(leftSpeed + 50);
+      servoRight.writeMicroseconds(rightSpeed + 50);
     }
-    /*else if (diff < 0)
+    else if (diff < 0)
     {
       servoLeft.write(leftSpeed-50);
       servoRight.write(rightSpeed-50);
-    }*/
+    }
+    delay(25*abs(diff));
   }
   else
   {
     // Default if no error
     servoLeft.writeMicroseconds(leftSpeed);
     servoRight.writeMicroseconds(rightSpeed);
+    delay(200);
   }
   
   //runningAvg *= 0.75; 
   //runningAvg
- delay(300); 
+ //delay(300); 
   
 }
 
@@ -431,22 +433,188 @@ void TurnRightWall()
     }
 }
 
+void Turn180()
+{  
+  forward(RightMediumForward, LeftMediumForward);
+  delay(800);
+  brake();
+  
+    int _LeftHingeUp = 25, 
+        _LeftHingeDown = 155,
+        _LeftGripForward = 27-10,
+        _LeftGripBack = 144;
+
+    int _RightHingeUp = 155,
+        _RightHingeDown = 25,
+        _RightGripForward = 155+10,
+        _RightGripBack = 28;    
+        
+    servoClampHingeLeft.write(_LeftHingeUp); // 25
+    servoClampHingeRight.write(_RightHingeUp); // 155
+    delay(1000);
+    
+    servoClampGripLeft.write(_LeftGripForward); //27
+    servoClampGripRight.write(_RightGripForward); //155
+    delay(1000);
+    
+    servoClampHingeLeft.write(_LeftHingeDown); // 155
+    servoClampHingeRight.write(_RightHingeDown); // 25
+    delay(1000);
+  
+    int leftHingeRange = _LeftHingeDown - _LeftHingeUp;
+    int rightHingeRange = _RightHingeUp - _RightHingeDown;
+    int gripRange = 32;
+  
+    for(int i=0; i < 4; i++)
+    {
+      servoClampGripLeft.write(_LeftGripForward); // 27-20
+      delay(1000);
+      servoClampHingeLeft.write(_LeftHingeUp); // 25
+      delay(1000);
+      servoClampGripLeft.write(_LeftGripForward+gripRange); // 27+45
+      delay(1000);
+      
+      // Smooth angle transition
+      int _step = 10;
+      for (int j = _step; j>=0; j--)
+      {
+        servoClampHingeLeft.write(_LeftHingeDown - j*leftHingeRange/_step); // 155
+        servoClampHingeRight.write(_RightHingeUp - j*rightHingeRange/_step);
+        delay(30);
+        servoClampGripLeft.write(_LeftGripForward + j*gripRange/_step); // 27
+        servoClampGripRight.write(_RightGripForward - (_step - j)*gripRange/_step); // 27
+        delay(30);
+      }
+     
+     // Reset positions for next iterarion
+     servoClampGripRight.write(_RightGripForward);
+     delay(500);
+     servoClampHingeRight.write(_RightHingeDown);
+     delay(1000);
+    }
+    
+    // Out of for, reset arm positions    
+    servoClampGripRight.write(175);
+    servoClampGripLeft.write(7);
+    delay(500);
+    servoClampHingeLeft.write(_LeftHingeUp);
+    servoClampHingeRight.write(_RightHingeUp);
+    delay(500);
+    servoClampGripRight.write(90);
+    servoClampGripLeft.write(90);
+    delay(500);
+}
+void pushup()
+{ 
+  // Initialize position
+    servoClampHingeLeft.write(ClampLeftHingeUp);
+    servoClampHingeRight.write(ClampRightHingeUp);
+    delay(1500);
+  
+    servoClampGripLeft.write(7);
+    servoClampGripRight.write(175);
+    delay(1000);
+
+    servoClampHingeLeft.write(ClampLeftHingeDown);
+    servoClampHingeRight.write(ClampRightHingeDown);
+    delay(1000);
+    
+    servoClampGripLeft.write(ClampLeftGripForward + 15);
+    servoClampGripRight.write(ClampRightGripForward - 15);
+    delay(1000);  
+}
+
+void rotate(int num)
+{        
+    for(int i = 0; i < num; i++)
+    {
+      servoClampHingeRight.write(ClampRightHingeDown + 35);
+      delay(200);
+      servoClampGripRight.write(ClampRightGripForward);
+      delay(200);
+      servoClampHingeRight.write(ClampRightHingeDown);
+      delay(200);
+      servoClampGripRight.write(ClampRightGripForward - 15);
+      delay(200);
+    }
+}
+void TurnWallOne()
+{
+  brake();
+  pushup();
+  rotate(6);  
+  delay(200);
+  forward(LeftFastForward, RightFastForward);
+  delay(600);
+  brake();
+  rotate(4);
+}
+
+void TurnWallTwo()
+{
+  brake();
+  pushupRight();
+  rotateRight(4);  
+  delay(200);  
+  forward(LeftFastForward, RightFastForward);
+  delay(1000);
+  brake();  
+  rotateRight(1);
+}
+
+void pushupRight()
+{ 
+  // Initialize position
+    servoClampHingeLeft.write(ClampLeftHingeUp);
+    servoClampHingeRight.write(ClampRightHingeUp);
+    delay(1500);
+  
+    servoClampGripLeft.write(7);
+    servoClampGripRight.write(175);
+    delay(1000);
+
+    servoClampHingeLeft.write(ClampLeftHingeDown);
+    servoClampHingeRight.write(ClampRightHingeDown);
+    delay(1000);
+    
+    servoClampGripLeft.write(ClampLeftGripForward + 30);
+    servoClampGripRight.write(ClampRightGripForward - 15);
+    delay(1000);  
+}
+
+void rotateRight(int num)
+{        
+    for(int i = 0; i < num; i++)
+    {
+      servoClampHingeLeft.write(ClampLeftHingeDown - 35);
+      delay(200);
+      servoClampGripLeft.write(ClampLeftGripForward + 15);
+      delay(200);
+      servoClampHingeLeft.write(ClampLeftHingeDown);
+      delay(200);
+      servoClampGripLeft.write(ClampLeftGripForward + 30);
+      delay(200);
+    }
+}
+
 void loop() 
 { 
   //while(!bumpTop);
- 
+
   GetOffBase();
   
   //Traverse to Pipe
   forward(LeftSlowForward, RightSlowForward);
   while(!bumpTop);
-  
+  delay(1000);
+  TurnWallOne();
+  /*
   forward(RightMediumForward, LeftMediumForward);
   delay(800);
   
   forward(RightMediumForward, RightMediumForward);
   delay(355);
-  
+  */
   // 4 wheel drive
   servoClampGripLeft.write(ClampLeftGripForward);
   servoClampGripRight.write(155);
@@ -502,7 +670,7 @@ void loop()
   }
   lidar.off();
 
-  delay(3000);
+  delay(7000);
   
   //Turn Left
   brake();
@@ -521,13 +689,8 @@ void loop()
   servoArm.write(trapUp);
   delay(500);
   
-  //reverse
-  forwardLidar(RightSlowForward, LeftSlowForward);
-  
-  delay(2000);
-  //180
-  forward(RightFastForward, RightFastForward);
-  delay(2500); 
+//Turn 180
+  Turn180();
   
   forward(LeftSlowForward, RightSlowForward);
   while(!bumpTop);
@@ -535,12 +698,7 @@ void loop()
     forwardLidar(LeftSlowForward, RightSlowForward);
   }
 
-  //Turn 90
-  forward(RightMediumForward, LeftMediumForward);
-  delay(800);
-  
-  forward(LeftMediumForward, LeftMediumForward);
-  delay(355);
+  TurnWallTwo();
 
 // 4 wheel drive
   servoClampGripLeft.write(ClampLeftGripForward);
@@ -586,7 +744,7 @@ void loop()
   ClimbRamp();
   
   forward(LeftMediumForward, RightFastForward);
-  delay(2000); 
+  delay(8000); 
    
   //Turn 90
   brake();

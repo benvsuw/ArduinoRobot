@@ -384,6 +384,53 @@ void TurnLeftWall()
 }
 
 
+void TurnRightWall()
+{
+      // Initialize position
+    servoClampHingeLeft.write(25); // 25
+    servoClampHingeRight.write(155); //155
+    delay(1000);
+  
+    servoClampGripLeft.write(27); //27
+    servoClampGripRight.write(28); //28
+    delay(1000);
+    
+    {
+      servoClampHingeLeft.write(25+54); // 25+54
+      servoClampHingeRight.write(155-54); //155-54
+      delay(1000);
+      
+      servoClampGripLeft.write(144); //144
+      servoClampGripRight.write(144); //144
+      delay(1000);
+      
+      servoClampHingeLeft.write(25);//25
+      servoClampHingeRight.write(155);//155
+      delay(1000);
+      
+      servoClampGripLeft.write(27-20);//27+20
+      servoClampGripRight.write(28-20);//28+20
+      delay(1000);
+    }
+    {
+      servoClampHingeLeft.write(25+48);//25+48
+      servoClampHingeRight.write(155-48);//155-48
+      delay(1000);
+      
+      servoClampGripLeft.write(144);//144
+      servoClampGripRight.write(144);//144
+      delay(1000);
+      
+      servoClampHingeLeft.write(ClampLeftHingeUp);//25
+      servoClampHingeRight.write(ClampRightHingeUp);//155
+      delay(1000);
+      
+      servoClampGripLeft.write(90);//144
+      servoClampGripRight.write(90);//144
+      delay(1000);
+    }
+}
+
 void loop() 
 { 
   //while(!bumpTop);
@@ -442,7 +489,7 @@ void loop()
   ClimbRamp();
   brake();
   delay(4000);
-  forward(1294, RightSlowForward);
+  forward(LeftSlowForward - 30, RightSlowForward);
   
   lidar.on();
   delay(200);
@@ -456,15 +503,11 @@ void loop()
   lidar.off();
 
   delay(3000);
-
-  //forward(RightMediumForward, RightMediumForward);
-  //delay(1250);
   
   //Turn Left
   brake();
   
   TurnLeftWall();
-  
   
   forward(LeftSlowForward, RightSlowForward);
   while(!bumpTop)
@@ -486,7 +529,7 @@ void loop()
   forward(RightFastForward, RightFastForward);
   delay(2500); 
   
-  forward(1294, RightSlowForward);
+  forward(LeftSlowForward, RightSlowForward);
   while(!bumpTop);
   {
     forwardLidar(LeftSlowForward, RightSlowForward);
@@ -546,8 +589,8 @@ void loop()
   delay(2000); 
    
   //Turn 90
-  forward(LeftFastForward, LeftFastForward);   
-  delay(355);
+  brake();
+  TurnRightWall();
   
   //drive to base
   // Front Wheel driving 

@@ -3,17 +3,6 @@
 #include <Wire.h>
 #include <LSM303.h>
 #include "LIDAR.h"
- 
-//Course constants for searching
-const int BaseWidth = 30; // cm, 1 foot
-const int CourseWidth = 300; // cm, 3m
-const int CourseLength = 300; //cm, 6m
-const int SafteyFactor = 2;
-const float North = 270.0;
-const float NorthEast = 297.5;
-const float South = 90.0;
-const float East = 0;
-const float West = 180.0;
 
 const int trapDown = 155;
 const int trapUp= 90;
@@ -43,26 +32,20 @@ const int LeftIRLimit = 130;
 const int RightIRLimit = 50;
 
 //Clamp constants
-const int ClampUp = 180;
-const int ClampDown = 0;
-const int ClampBack = 180;
-const int ClampCenter = 90;
-const int ClampFront = 0;
- 
 const int ClampLeftHingeUp = 25;
 const int ClampRightHingeUp = 155;
 
 const int ClampLeftHingeDown = 155;
 const int ClampRightHingeDown = 25;
 
-const int ClampRightGripBack = 28;//20;//22;//17;
-const int ClampLeftGripBack = 144;//151;//149;//155;
+const int ClampRightGripBack = 27;//20;//22;//17;
+const int ClampLeftGripBack = 145;//151;//149;//155;
 
 const int ClampRightGripForward = 144;//153;//155;
 const int ClampLeftGripForward = 27;//22;
  
 LSM303 compass;
- float heading;
+float heading;
 float initialHeading;
 float gravity;
 float initialGravity;
@@ -113,90 +96,6 @@ void forward(int leftSpeed, int rightSpeed)
     servoRight.writeMicroseconds(rightSpeed);
 }
 
-
-void forward(int velPercent, float wantedHeading)
-{
-
-   // Normalize velocity{0..99}, heading{0..360}
-
-   velPercent %= 100;
-
-   while (wantedHeading < 0.0) wantedHeading += 360;
-
-   while (wantedHeading >= 360) wantedHeading -= 360;
-
-   
-
-   compass.read();
-
-   float _heading = compass.heading();
-
-   //while (_heading < 0.0) _heading += 360;
-
-   //while (_heading >= 360) _heading -= 360;
-
-   
-
-   float adjustAngle = wantedHeading - _heading;
-
-   while (adjustAngle > 180) adjustAngle -= 360;
-
-   while (adjustAngle < -180) adjustAngle += 360;
-
-   
-
-   float leftRange = LeftStop - LeftFastForward;
-
-   float rightRange = RightFastForward - RightStop; 
-   
-   
-
-   float leftSpeed = (velPercent*leftRange/100);
-
-   float rightSpeed = (velPercent*rightRange/100);
-   leftRange *= 2;
-   rightRange *= 2;
-  /* 
-   Serial.println("-----");
-   Serial.println(wantedHeading);
-   Serial.println(_heading);
-   Serial.println(adjustAngle);
-   delay(200);
-*/
-   if (adjustAngle > 0) 
-
-   {
-
-      leftSpeed = leftSpeed + (leftRange - leftSpeed)*(adjustAngle)/180.0;
-
-      rightSpeed = rightSpeed - rightSpeed*(adjustAngle)/180.0;
-
-   }
-
-   else
-
-   {
-
-      leftSpeed = leftSpeed - leftSpeed*(-adjustAngle)/180.0;
-
-      rightSpeed = rightSpeed + (rightRange - rightSpeed)*(-adjustAngle)/180.0;
-
-   }
-
-   
-
-   leftSpeed = LeftStop - leftSpeed;
-
-   rightSpeed = RightStop + rightSpeed;
-
-   
-
-   servoLeft.writeMicroseconds((int)leftSpeed);
-
-   servoRight.writeMicroseconds((int)rightSpeed);
-
-}
-
 void brake(){
     servoLeft.writeMicroseconds(1378);  
     servoRight.writeMicroseconds(1336);    
@@ -205,74 +104,6 @@ void brake(){
 void reverse(){
     servoLeft.write(100.5);  
     servoRight.write(57);    
-}
-
-void left(){
-    servoLeft.write(77.5);  
-    servoRight.write(74);    
-}
-
-void right(){
-    servoLeft.write(83.5);  
-    servoRight.write(80);    
-}
-
-void turn(float offset)
-{
-  boolean temp = false;  
-  compass.read();
-  heading = compass.heading();
-  float wantedHeading = initialHeading + offset;
-
-  // This algorithm determines whether it is faster to turn right or left depending on the current heading.
-  if(heading < initialHeading)
-  {
-    heading += 360;
-  }
-  
-  if((heading - wantedHeading) < 180) // Modulus does not work on floats
-  {
-    right();
-  }
-  else
-  {
-    left();
-  }  
-  while(!headingCheck(offset)){};  // Line up with base.
-}
-
-boolean headingCheck(double offset)  // Checks that the heading is correct.
-{
-  compass.read();
-  boolean temp = false;  
-  float tempheading = compass.heading();
-  float tolerance = 2.0;
-  float wantedHeading = initialHeading + offset;  
-
-  if(wantedHeading > 360)
-  {
-    wantedHeading -= 360;
-  }
-  
-  if((wantedHeading < tolerance) && (tempheading > (360-tolerance)))
-  {
-    wantedHeading += 360;
-  }
-  
-  if((wantedHeading > (360 - tolerance)) && (tempheading < tolerance))
-  {
-    wantedHeading -= 360;
-  } 
-  
-  float error = abs(wantedHeading - tempheading);
-  // Compare with the initial vector.  
-  
-  if( error < tolerance )
-  {
-    temp = true;
-  }
-  
-  return temp;
 }
 
 boolean onRamp(double percent) // Checks if on ramp.
@@ -294,204 +125,8 @@ boolean onRamp(double percent) // Checks if on ramp.
   return false;
 }
 
-void stayOnRamp()
-{
-  // Check two IR Sensors  
-  int leftIRValue = analogRead(IRLeftPin);   
-  int rightIRValue = analogRead(IRRightPin); 
-  
-  if( (leftIRValue < LeftIRLimit)&&(rightIRValue < RightIRLimit)) // Check left IR. Change to correct calibration cutoff.
-  {
-    // Add more complicated course adjustment.
-    forward(LeftSlowForward, RightSlowForward + 50);  
-  }
-  else if( leftIRValue < LeftIRLimit ) // Check left IR. Change to correct calibration cutoff.
-  {
-    // Add more complicated course adjustment.
-    right();
-  }
-  else if( rightIRValue < RightIRLimit ) // Check Right IR. Change to correct calibration cutoff.
-  {
-    // Add more complicated course adjustment.
-    left();
-  }
-  else
-  {
-    forward(LeftSlowForward, RightSlowForward + 50);
-  }
-}
-
-void deployTrap()
-{
-  //TODO:: Servo control Code
-}
-
-void retractTrap()
-{
-  //TODO:: Servo Control Code
-}
-
-
-//Searches for an item that should be x cm away, stop once found or if a boundary hit
-void search(int distance)
-{
-  compass.read();
-  float wantedHeading = compass.heading();
-  while(!bumpTop || !bumpBottom || lidar.scan() < distance)
-  {    
-    forward(50, wantedHeading);
-  }      
-  brake();
-}
-
-//Returns time taken in us to get from one end of the base to the other
-int calculateDelayTime(double distance)
-{
-  long time1 = micros();	
-  compass.read();
-  float wantedHeading = compass.heading();
-  while(!bumpTop || !bumpBottom || lidar.scan() > distance)
-  {    
-    forward(50, wantedHeading);
-  }    
-  brake();	
-  return (int)((micros() - time1) / 2);
-}
-
-//Determines search result (found base, hit base, hit wall/pipe)
-//Executes appropriate response
-bool parseGridSearchResult(int searchNumber, double distance)
-{
-  if(bumpTop)
-  {
-    return false;
-  }
-  else if(bumpBottom) 
-  {
-    //Case needs to be beefed up so that the robot centers itself on base
-    deployTrap();
-    retractTrap();
-    turn(South + (90 * searchNumber) % 360);
-    return true;
-  }
-  else if(lidar.scan() < distance)
-  {
-    //Find time taken to get to other end of base
-    int delayTime = calculateDelayTime(distance);
-    
-    //Reverse till centered            
-    reverse();
-    delayMicroseconds(delayTime);
-    brake();
-    
-    //Turn to be perpindicular to base and go forward till the base is hit
-    turn(West + (90 * searchNumber) % 360);
-    compass.read();
-    float wantedHeading = compass.heading();
-    while(!bumpBottom) 
-    {    
-      forward(50, wantedHeading);
-    }
-    brake();
-
-    deployTrap();
-    retractTrap();
-
-    //Return to wall and orientate 180deg from search direction 
-    turn(East + (90 * searchNumber) % 360);
-    compass.read();
-    wantedHeading = compass.heading();
-    while(!bumpBottom || !bumpTop)
-    {    
-      forward(50, wantedHeading);
-    }    
-    brake();
-    turn(South + (90 * searchNumber) % 360);
-    return true;
-  }
-  return false;
-}
-
-//Function for finding and capturing lego man
-//Final posistion wil be against the east wall facing south
-void gridSearch()
-{
-  int maxWidth = CourseWidth - BaseWidth / SafteyFactor;
-  int maxLength = CourseLength - BaseWidth / SafteyFactor;
-
-  lidar.on();
-  //Shouldn't need to run all four walls, but code is here in case it is necessary
-  for(int i = 0; i < 4; i++)
-  {
-    double distance = 0;
-    if(i % 2 == 0)
-      distance = maxWidth;
-    else 
-      distance = maxLength;
-		
-    search(distance);		
-    
-    if(parseGridSearchResult(i, distance))
-    {
-      //Traverse to be back on the east wall facing south
-      for (int j = 0; j < i; j++)
-      {
-        compass.read();
-        float wantedHeading = compass.heading();
-        while(!bumpBottom || !bumpTop)
-        {    
-          forward(50, wantedHeading);
-        }            
-        brake();
-        turn(South + (90 * j) % 360);
-      }
-      break;
-    }
-    else //Check next wall
-    {
-      turn(West + (90 * i) % 360);
-    }
-  }
-  lidar.off();
-}
-
-void moveUntilBump()
-{
-  compass.read();
-  float wantedHeading = compass.heading();
-  while(!(bumpTop))
-  {
-    forward(50, wantedHeading);
-  }
-}
-
-void DeployClamp()
-{
-  for(int i = ClampUp; i > ClampDown; i-=5)
-  {
-    servoClampHingeLeft.write(i);
-    servoClampHingeRight.write(i);
-    delay (10);
-  }
-  servoClampGripLeft.write(ClampBack);
-  servoClampGripRight.write(ClampBack);
-}
-
-
 void ClimbRamp()
 {  
-  //Test Grip
-  /*
-  servoClampHingeLeft.write(ClampLeftHingeDown);
-  servoClampHingeRight.write(ClampRightHingeDown);
-  
-  delay(1000);
- 
-  servoClampGripLeft.write(ClampLeftGripForward);
-  servoClampGripRight.write(ClampRightGripForward);
-  
-  while(!bumpTop);
-  */
   forward(LeftFastForward, RightFastForward);
 
   //Segway Up Ramp
@@ -526,11 +161,6 @@ void ClimbRamp()
     //forward(LeftSlowForward, RightSlowForward);
   servoClampGripLeft.write(ClampLeftGripBack + 15);
   servoClampGripRight.write(ClampRightGripBack - 15);
-    
-  //delay(200);
-  //Reverse Drive
-  //forward(RightFastForward, LeftFastForward);
-  
   
   delay(750);
   
@@ -544,7 +174,8 @@ void ClimbRamp()
   delay(8000);
 
   
-  while(onRamp(0.97));
+  while(onRamp(0.96));
+  delay(5000);
   servoClampHingeLeft.write(ClampLeftHingeUp);
   servoClampHingeRight.write(ClampRightHingeUp);
   delay(1000);
@@ -696,117 +327,62 @@ void GetOffBase()
   servoClampGripRight.write(90);
 }
 
-void rotate(int angle)
+void TurnLeftWall()
 {
-  if(angle > 0)// TODO: remove if. For testing.
-  {
-    servoClampGripLeft.write(ClampLeftGripForward);
-    servoClampGripRight.write(155);
+      // Initialize position
+    servoClampHingeLeft.write(25); // 25
+    servoClampHingeRight.write(155); //155
     delay(1000);
   
+    servoClampGripLeft.write(144); //144
+    servoClampGripRight.write(155); //155
+    delay(1000);
+    
+// First rotation
+    {
+      servoClampHingeLeft.write(25+54); // 25+54
+      servoClampHingeRight.write(155-54); //155-54
+      delay(1000);
+      
+      servoClampGripLeft.write(27); //27
+      servoClampGripRight.write(28); //28
+      delay(1000);
+      
+      servoClampHingeLeft.write(25);//25
+      servoClampHingeRight.write(155);//155
+      delay(1000);
+      
+      servoClampGripLeft.write(144+20);//144+20
+      servoClampGripRight.write(144+20);//144+20
+      delay(1000);
+    }
+// Second rotation
+    {
+      servoClampHingeLeft.write(25+48);//25+48
+      servoClampHingeRight.write(155-48);//155-48
+      delay(1000);
+      
+      servoClampGripLeft.write(27);//27
+      servoClampGripRight.write(28);//28
+      delay(1000);
+      
+      servoClampHingeLeft.write(25);//25
+      servoClampHingeRight.write(155);//155
+      delay(1000);
+      
+      servoClampGripLeft.write(144);//144
+      servoClampGripRight.write(144);//144
+      delay(1000);
+    }
+    
     servoClampHingeLeft.write(ClampLeftHingeUp);
     servoClampHingeRight.write(ClampRightHingeUp);
     delay(1000);
-    
-    for(int i =0; i < 5; i++)
-    {
-      //servoClampGripLeft.write(ClampLeftGripForward); 
-      
-      servoClampGripLeft.write(ClampLeftGripBack);
-      delay(500);
-      servoClampHingeLeft.write(ClampLeftHingeDown - 15);
-      delay(500);
-      servoClampGripLeft.write(ClampLeftGripForward);
-      delay(500);
-      servoClampHingeLeft.write(ClampLeftHingeUp); 
-      delay(500);
-    }
-  //////////////////////////////////
-  //const int ClampLeftHingeUp = 25;
-  //const int ClampRightHingeUp = 155;
-  
-  //const int ClampLeftHingeDown = 155;
-  //const int ClampRightHingeDown = 25;
-  
-  //const int ClampRightGripBack = 28;//20;//22;//17;
-  //const int ClampLeftGripBack = 144;//151;//149;//155;
-  
-  //const int ClampRightGripForward = 144;//153;//155;
-  //const int ClampLeftGripForward = 27;//22;
-  //////////////////////////////////    
-    
-  }
-  else
-  {// method 2
-    // Initialize position
-    servoClampHingeLeft.write(ClampLeftHingeUp);
-    servoClampHingeRight.write(ClampRightHingeUp);
+    servoClampGripLeft.write(90);
+    servoClampGripRight.write(90);
     delay(1000);
-  
-    servoClampGripLeft.write(ClampLeftGripBack);
-    servoClampGripRight.write(155);
-    delay(1000);
-    
-    //for (int i =0; i < 2; i++)
-    {
-      servoClampHingeLeft.write(ClampLeftHingeUp+47);
-      //servoClampHingeRight.write(ClampRightHingeUp-47);
-      delay(1000);
-      
-      servoClampGripLeft.write(ClampLeftGripForward);
-      //servoClampGripRight.write(ClampRightGripBack);
-      delay(1000);
-      
-      servoClampHingeLeft.write(ClampLeftHingeUp);
-      //servoClampHingeRight.write(ClampRightHingeUp);
-      delay(1000);
-      
-      servoClampGripLeft.write(ClampLeftGripBack);
-      //servoClampGripRight.write(ClampRightGripForward);
-      delay(1000);
-    }
-    {
-      servoClampHingeLeft.write(ClampLeftHingeUp+54);
-      servoClampHingeRight.write(ClampRightHingeUp-54);
-      delay(1000);
-      
-      servoClampGripLeft.write(ClampLeftGripForward);
-      servoClampGripRight.write(ClampRightGripBack);
-      delay(1000);
-      
-      servoClampHingeLeft.write(ClampLeftHingeUp);
-      servoClampHingeRight.write(ClampRightHingeUp);
-      delay(1000);
-      
-      servoClampGripLeft.write(ClampLeftGripBack);
-      servoClampGripRight.write(ClampRightGripForward);
-      delay(1000);
-    }
-    
-    
-  }
-  
-  //////////////////////////////////
-  //const int ClampLeftHingeUp = 25;
-  //const int ClampRightHingeUp = 155;
-  
-  //const int ClampLeftHingeDown = 155;
-  //const int ClampRightHingeDown = 25;
-  
-  //const int ClampRightGripBack = 28;//20;//22;//17;
-  //const int ClampLeftGripBack = 144;//151;//149;//155;
-  
-  //const int ClampRightGripForward = 144;//153;//155;
-  //const int ClampLeftGripForward = 27;//22;
-  //////////////////////////////////
-  
-  
-  //forward(1294, RightSlowForward);
-  
-  //delay(7000);
-  
-  //forward(RightFastForward, RightFastForward);
 }
+
 
 void loop() 
 { 
@@ -815,22 +391,43 @@ void loop()
   GetOffBase();
   
   //Traverse to Pipe
-  while(!bumpTop)
-  {
-    forwardLidar(LeftSlowForward, RightSlowForward);
-  }
+  forward(LeftSlowForward, RightSlowForward);
+  while(!bumpTop);
+  
+  forward(RightMediumForward, LeftMediumForward);
+  delay(800);
   
   forward(RightMediumForward, RightMediumForward);
-  delay(500);
-  forward(LeftFastForward, RightMediumForward);
+  delay(355);
+  
+  // 4 wheel drive
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(155);
+  delay(1000);
 
-  //while(bumpTop && !onRamp(0.85));
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+  delay(1000);
+  
   forward(LeftFastForward, RightFastForward);
-
-  //Grip
-  while(!onRamp(0.85));
-
+  //Grip ramp
+  while(!onRamp(0.6));
+  
   brake();
+  
+  for (int i = 0; i < 20; i++)
+  {
+      servoClampGripLeft.write(ClampLeftGripForward - i);
+      servoClampGripRight.write(155 + i);
+      delay(60);
+  }
+  
+  servoClampHingeLeft.write(ClampLeftHingeUp);
+  servoClampHingeRight.write(ClampRightHingeUp);
+  delay(1000);
+  servoClampGripLeft.write(90);
+  servoClampGripRight.write(90);
+  
   delay(1000);
   servoClampGripLeft.write(ClampLeftGripForward +5);
   servoClampGripRight.write(ClampRightGripForward - 5);
@@ -843,25 +440,32 @@ void loop()
   delay(1000);
    
   ClimbRamp();
-  
+  brake();
+  delay(4000);
   forward(1294, RightSlowForward);
   
-  lidar.off();
-  delay(100);
   lidar.on();
   delay(200);
   int val = lidar.scan();
+  
   while(val > 150)
   {
+    delay(50);
     val = lidar.scan();
-    delay(20);
   }
   lidar.off();
 
   delay(3000);
 
-  forward(RightMediumForward, RightMediumForward);
-  delay(1250);
+  //forward(RightMediumForward, RightMediumForward);
+  //delay(1250);
+  
+  //Turn Left
+  brake();
+  
+  TurnLeftWall();
+  
+  
   forward(LeftSlowForward, RightSlowForward);
   while(!bumpTop)
   {
@@ -887,17 +491,43 @@ void loop()
   {
     forwardLidar(LeftSlowForward, RightSlowForward);
   }
+
+  //Turn 90
+  forward(RightMediumForward, LeftMediumForward);
+  delay(800);
   
-  //90
   forward(LeftMediumForward, LeftMediumForward);
+  delay(355);
+
+// 4 wheel drive
+  servoClampGripLeft.write(ClampLeftGripForward);
+  servoClampGripRight.write(155);
   delay(1000);
-  //drive onto ramp
+
+  servoClampHingeLeft.write(ClampLeftHingeDown);
+  servoClampHingeRight.write(ClampRightHingeDown);
+  delay(1000);
+  
   forward(LeftFastForward, RightFastForward);
-
-  //Grip
-  while(!onRamp(0.85));
-
+  
+  //Grip ramp
+  while(!onRamp(0.6));
+  
   brake();
+  
+  for (int i = 0; i < 20; i++)
+  {
+      servoClampGripLeft.write(ClampLeftGripForward - i);
+      servoClampGripRight.write(155 + i);
+      delay(60);
+  }
+  
+  servoClampHingeLeft.write(ClampLeftHingeUp);
+  servoClampHingeRight.write(ClampRightHingeUp);
+  delay(1000);
+  servoClampGripLeft.write(90);
+  servoClampGripRight.write(90);
+  
   delay(1000);
   servoClampGripLeft.write(ClampLeftGripForward +5);
   servoClampGripRight.write(ClampRightGripForward - 5);
@@ -908,101 +538,29 @@ void loop()
   servoClampGripLeft.write(ClampLeftGripForward);
   servoClampGripRight.write(ClampRightGripForward);
   delay(1000);
-   
+  
+  //Climb
   ClimbRamp();
-  forward(1294, RightSlowForward);
+  
+  forward(LeftMediumForward, RightFastForward);
+  delay(2000); 
    
   //Turn 90
- 
+  forward(LeftFastForward, LeftFastForward);   
+  delay(355);
+  
   //drive to base
+  // Front Wheel driving 
+  GetOffBase();
+  forward(LeftSlowForward, RightSlowForward);   
+   while(!bumpTop);
+   brake();
+  
+   //redploy trap 
+   servoArm.write(trapDown);
    
-  //redploy trap 
-   
-  while(1);
-/*
-  /// Forward unitl hitting bump sensor.
-  //forward(LeftFastForward, RightFastForward);
-  //while(1);
-  //delay(20000);
-  //turn(NorthEast);
-   // while(1);
-
-  //servoClampGripLeft.write(ClampLeftGripBack + 10);
-  //servoClampGripRight.write(ClampRightGripBack - 10);
-  //Due to bump sensor not being complete use IR for now
-  compass.read();
-  float head = compass.heading();
-  //long time = millis();
-  //while(analogRead(IRLeftPin) < LeftIRPipeValue && analogRead(IRRightPin) < RightIRPipeValue)
-  
-  while(1)
-  {
-    forward(50, head);
-  }
-  
-  brake();
-  while(1);
-  //turn(NorthEast);
-  while(!onRamp(0.85))
-  {
-     forward(50, head - 90);
-  }
-
-  //while(!bumpTop);
-  
-  // Turn until the right heading
-  //turn(NorthEast);
-  delay(2000);
-  int left = LeftFastForward;
-  int right = RightFastForward;
- // forward(left, right);
-  
-  compass.read();
-  float head = compass.heading();
-  */
-  forward(LeftFastForward, RightFastForward);
-  
-  // Add course corrections as needed.
-  
-  while(!onRamp(0.75));
-  brake();
-    delay(1000);
-  servoClampGripLeft.write(ClampLeftGripForward +5);
-  servoClampGripRight.write(ClampRightGripForward - 5);
-    delay(1000);
-  servoClampHingeLeft.write(ClampLeftHingeDown);
-  servoClampHingeRight.write(ClampRightHingeDown);
-    delay(1000);
-  servoClampGripLeft.write(ClampLeftGripForward);
-  servoClampGripRight.write(ClampRightGripForward);
-    delay(1000);
-  
-    
-  ClimbRamp();
-
-  brake(); 
- 
-  // Search find and capture lego figure
-  gridSearch();
-  
-  // Add course corrections as needed.
-  // Drive forward until on ramp.
-  forward(LeftMediumForward, RightFastForward);
-  ClimbRamp();
-
-  brake(); 
-  
-  // Dead reckoning back to base
-  forward(LeftFastForward, RightFastForward);
-  while(!bumpTop);
-  delay(1000); //adjust so that it travels the right distance.
-  turn(West);  // Line up with base.  
-  moveUntilBump();
-  deployTrap(); // Safely deposit person at base 2.  
-  
-  while(1) // do nothing after the main loop.
-  {
-  }
+   //WE WIN
+   while(1);
 }
 
 void ISR_BUMP_TOP()

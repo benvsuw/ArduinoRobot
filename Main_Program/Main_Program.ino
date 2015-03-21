@@ -38,8 +38,8 @@ const int ClampRightHingeUp = 155;
 const int ClampLeftHingeDown = 155;
 const int ClampRightHingeDown = 25;
 
-const int ClampRightGripBack = 27;//20;//22;//17;
-const int ClampLeftGripBack = 145;//151;//149;//155;
+const int ClampRightGripBack = 28;//20;//22;//17;
+const int ClampLeftGripBack = 144;//151;//149;//155;
 
 const int ClampRightGripForward = 144;//153;//155;
 const int ClampLeftGripForward = 27;//22;
@@ -145,11 +145,15 @@ void ClimbRamp()
     delay(5000);
     servoArm.write(trapDown);
     delay(1500);
+    forward(LeftSlowForward, RightFastForward);
+
     servoClampGripLeft.write(ClampLeftGripBack);
     servoClampGripRight.write(160);
 
     delay(2000);
     servoClampGripRight.write(ClampRightGripBack);
+    forward(LeftFastForward, RightFastForward);
+
     delay(2000);
   }
 
@@ -238,8 +242,6 @@ void setup()
 
 void forwardLidar(int leftSpeed, int rightSpeed)
 {
- 
-  static int runningAvg; 
   servoLeft.write(leftSpeed);
   servoRight.write(rightSpeed);  
   int reading = lidar.scan();
@@ -250,42 +252,27 @@ void forwardLidar(int leftSpeed, int rightSpeed)
   {
     return;
   }
-  if (runningAvg == 0)
-  {
-    //runningAvg = (reading + reading2) / 2;
-  }
-  else 
-  {
-    //runningAvg *= 0.75;
-    //runningAvg += ((reading + reading2) / 2)*0.25;
-  }
+
   // Cases
   int diff = reading2 - reading; 
   int diffTol = 10;
   
-  if (abs(diff)  > diffTol)
-  {
-    // Assume we've seen a corner. Reset.
-    //runningAvg = reading2;
-    
-    servoLeft.writeMicroseconds(leftSpeed);
-    servoRight.writeMicroseconds(rightSpeed);
-  }
-  else if (abs(diff) >= 1) // correction tolerance 
+  
+  if (abs(diff) >= 1 && abs(diff) < diffTol) // correction tolerance 
   {
     // Valid difference. Find direction
     if (diff > 0) 
     {
       // Further away from wall. Correct towards Lidar
-      servoLeft.writeMicroseconds(leftSpeed + 50);
-      servoRight.writeMicroseconds(rightSpeed + 50);
+      servoLeft.writeMicroseconds(leftSpeed + 30);
+      servoRight.writeMicroseconds(rightSpeed + 30);
     }
     else if (diff < 0)
     {
-      servoLeft.write(leftSpeed-50);
-      servoRight.write(rightSpeed-50);
+      servoLeft.write(leftSpeed-30);
+      servoRight.write(rightSpeed-30);
     }
-    delay(25*abs(diff));
+    delay(200*abs(diff));
   }
   else
   {
@@ -294,11 +281,6 @@ void forwardLidar(int leftSpeed, int rightSpeed)
     servoRight.writeMicroseconds(rightSpeed);
     delay(200);
   }
-  
-  //runningAvg *= 0.75; 
-  //runningAvg
- //delay(300); 
-  
 }
 
 void GetOffBase()
@@ -547,7 +529,7 @@ void TurnWallOne()
   forward(LeftFastForward, RightFastForward);
   delay(600);
   brake();
-  rotate(3);
+  rotate(1);
 }
 
 void TurnWallTwo()
@@ -665,7 +647,7 @@ void loop()
   }
   lidar.off();
 
-  delay(6705);
+  delay(6500);
   
   //Turn Left
   brake();

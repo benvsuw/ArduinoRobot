@@ -22,23 +22,31 @@
 
  void Lidar::initPWM(int pinTrig, int pinEcho)
  {
+ 		_pinEcho = pinEcho;
+ 		_pinTrig = pinTrig;
  	  pinMode(_pinTrig, OUTPUT); // Set pin 2 as trigger pin
       pinMode(_pinEcho, INPUT); // Set pin 3 as monitor pin
-      digitalWrite(2, HIGH); // Set LIDAR off
-      
+      digitalWrite(_pinTrig, HIGH); // Set LIDAR off
+      _on = false;
       _init = true;
  }
  
  void Lidar::on()
  {
- 	digitalWrite(2, LOW);
- 	_on = true;
+ 	if(!_on)
+	{
+ 		digitalWrite(_pinTrig, LOW);
+ 		_on = true;
+ 	}
  }
  
  void Lidar::off()
  {
- 	digitalWrite(2, HIGH);
- 	_on = false;
+ 	if(_on)
+ 	{
+ 		digitalWrite(_pinTrig, HIGH);
+ 		_on = false;
+ 	}
  }
  
  // Get distance in cm
@@ -46,7 +54,19 @@
  {
     if(!_on)
     	on();
-    return scanPWM();
+    
+    long val = scanPWM();
+    
+    while(val == 0)
+    {
+    	off();
+    	delay(200);
+    	on();
+    	delay(200);
+    	val = scanPWM();
+    }
+    
+    return val;
  }
  
  
@@ -55,9 +75,13 @@
  ************************************************************************/
   int Lidar::scanPWM()
   {   
-    unsigned long pulse_width = pulseIn(3, HIGH);
-    return (int)pulse_width / 10; // 10usec = 1 cm of distance for LIDAR-Lite;
+    unsigned long pulse_width = 0;
+    
+	pulse_width = pulseIn(_pinEcho, HIGH);
+    return pulse_width/10; // 10usec = 1 cm of distance for LIDAR-Lite
   }
+  
+
   
   /*
   int Lidar::scanI2C()
